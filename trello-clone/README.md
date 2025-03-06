@@ -1,40 +1,70 @@
-# Welcome to Remix!
+# SaaS Sprint - One Clone a Day
 
-- 📖 [Remix docs](https://remix.run/docs)
+Welcome to the SaaS Sprint challenge, where we build one SaaS application clone every day! This repository is part of a series where we recreate popular SaaS products to learn modern web development practices and patterns.
 
-## Development
+## 🎯 Current Project: Trello Clone
 
-Run the dev server:
+This repository contains a Trello clone built with:
+- [Remix](https://remix.run/) - Full stack web framework
+- [React](https://reactjs.org/) - UI library
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [Prisma](https://www.prisma.io/) - Database ORM
+- [PostgreSQL](https://www.postgresql.org/) - Database
 
-```shellscript
+## 🚀 Getting Started
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/saas-sprint.git
+cd saas-sprint/trello-clone
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Set up your environment variables:
+```bash
+cp .env.example .env
+```
+
+4. Start the development server:
+```bash
 npm run dev
 ```
 
-## Deployment
+## 📦 Build and Deploy
 
-First, build your app for production:
-
-```sh
+Build for production:
+```bash
 npm run build
 ```
 
-Then run the app in production mode:
-
-```sh
+Start in production mode:
+```bash
 npm start
 ```
 
-Now you'll need to pick a host to deploy it to.
+## 🌟 Features
 
-### DIY
+- [ ] Drag and drop kanban board
+- [ ] Real-time collaboration
+- [ ] Board sharing and permissions
+- [ ] Card labels and due dates
+- [ ] Activity logging
+- [ ] User authentication
 
-If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
+## 🤝 Contributing
 
-Make sure to deploy the output of `npm run build`
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-- `build/server`
-- `build/client`
+## 📝 License
 
-## Styling
+This project is [MIT](LICENSE) licensed.
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever css framework you prefer. See the [Vite docs on css](https://vitejs.dev/guide/features.html#css) for more information.
+## 🔗 More Projects
+
+Check out other projects in the SaaS Sprint series:
+- Coming soon!

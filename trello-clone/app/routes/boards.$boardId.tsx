@@ -79,7 +79,7 @@ export default function BoardDetailPage() {
       <header className="bg-blue-600 text-white p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold">
-            <Link to="/" className="hover:underline">Trello 클론</Link>
+            <Link to="/" className="hover:underline">Trello Clone</Link>
           </h1>
         </div>
       </header>
@@ -88,7 +88,7 @@ export default function BoardDetailPage() {
         <div className="flex items-center mb-6">
           <h2 className="text-xl font-bold text-gray-800 mr-4">Board Details</h2>
           <Link to="/" className="text-blue-600 hover:underline text-sm">
-            ← 모든 보드 보기
+            ← Back to All Boards
           </Link>
         </div>
         
@@ -137,14 +137,14 @@ export default function BoardDetailPage() {
                   <input type="hidden" name="listId" value={list.id} />
                   <input 
                     name="cardTitle" 
-                    placeholder="새 카드 추가..." 
+                    placeholder="Add new card..." 
                     className="w-full border border-gray-300 rounded p-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
                   />
                   <button 
                     type="submit" 
                     className="w-full text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded transition-colors"
                   >
-                    + 카드 추가
+                    + Add Card
                   </button>
                 </Form>
               </div>
@@ -155,14 +155,14 @@ export default function BoardDetailPage() {
             <Form method="post" reloadDocument>
               <input 
                 name="listName" 
-                placeholder="새 리스트 추가..." 
+                placeholder="Add new list..." 
                 className="w-full border border-gray-300 rounded p-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
               />
               <button 
                 type="submit" 
                 className="w-full text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded transition-colors"
               >
-                + 리스트 추가
+                + Add List
               </button>
             </Form>
           </div>

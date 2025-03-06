@@ -1,4 +1,4 @@
-// app/routes/_index.tsx - 보드 목록 페이지
+// app/routes/_index.tsx - Board List Page
 import { json, redirect } from '@remix-run/node';
 import type { LoaderFunction, ActionFunction } from '@remix-run/node';
 import { useLoaderData, Link, Form } from "@remix-run/react";
@@ -30,12 +30,12 @@ export default function BoardsPage() {
     <div className="min-h-screen bg-blue-50">
       <header className="bg-blue-600 text-white p-4 shadow-md">
         <div className="container mx-auto">
-          <h1 className="text-2xl font-bold">Trello 클론</h1>
+          <h1 className="text-2xl font-bold">Trello Clone</h1>
         </div>
       </header>
       
       <main className="container mx-auto p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">내 보드</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-6">My Boards</h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
           {boards.map((board: { id: string; title: string }) => (
@@ -53,14 +53,14 @@ export default function BoardsPage() {
               <input 
                 type="text" 
                 name="title" 
-                placeholder="새 보드 이름..." 
+                placeholder="New board name..." 
                 className="w-full border border-gray-300 rounded p-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
               />
               <button 
                 type="submit" 
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition-colors"
               >
-                보드 생성
+                Board Create
               </button>
             </Form>
           </div>
@@ -68,7 +68,7 @@ export default function BoardsPage() {
       </main>
       
       <footer className="container mx-auto p-4 text-center text-gray-500 text-sm">
-        <p>Trello 클론 - Remix + Supabase로 구현</p>
+        <p>Trello Clone - Built with Remix + Supabase</p>
       </footer>
     </div>
   );
