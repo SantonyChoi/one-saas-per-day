@@ -1,37 +1,50 @@
-# One SaaS Per Day - 🤖 AI-Powered Development Challenge
+# Trello Clone
 
-Build and learn by cloning popular SaaS applications using modern AI tools! This repository is part of an exciting challenge where we leverage AI assistance to recreate widely-used SaaS products, demonstrating how to effectively combine human creativity with AI capabilities.
+A simplified Trello clone built with modern web technologies, featuring drag-and-drop kanban boards for efficient task management.
 
-## 🎯 Current Projects
-- Trello Clone
-- Coming soon!
+## 🚀 Tech Stack
 
-The projects are built with the following technologies:
-- [Remix](https://remix.run/) - Full stack web framework
-- [React](https://reactjs.org/) - UI library
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
-- [Prisma](https://www.prisma.io/) - Database ORM
-- [PostgreSQL](https://www.postgresql.org/) - Database
+- **Framework**: [Remix](https://remix.run/)
+- **UI Library**: [React](https://reactjs.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Database**: [Supabase](https://supabase.com/)
+- **Deployment**: Vercel (planned)
 
-## 🎓 Learning Objectives
+## 🛠️ Getting Started
 
-- Learn how to effectively use AI tools in real-world development
-- Understand popular SaaS architectures and patterns
-- Practice implementing common SaaS features and best practices
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## 💡 Development Philosophy
+2. **Set up environment variables**
+   - Copy `.env.example` to `.env`
+   - Add your Supabase credentials
 
-This project embraces AI-assisted development while maintaining high code quality and learning value:
-- Each feature is built with AI guidance but includes human oversight
-- Focus on understanding the underlying concepts, not just copying solutions
-- Emphasis on best practices and production-ready code
+3. **Run development server**
+   ```bash
+   npm run dev
+   ```
 
-## 🤝 Contributing
+4. **Build for production**
+   ```bash
+   npm run build
+   ```
 
-Contributions are welcome! Please feel free to submit a Pull Request. Whether you're using AI tools or traditional development methods, we value your input.
+## 🎯 Features
 
-## 📝 License
+- ✅ Create and manage boards
+- ✅ Real-time updates with Supabase
+- ✅ Responsive design
+- 🚧 Drag and drop cards (Coming soon)
+- 🚧 Board sharing and collaboration (Coming soon)
 
-This project is [MIT](LICENSE) licensed.
+## 📝 Project Purpose
+
+This Trello clone serves as a practical example of building a modern web application with real-time features. It demonstrates best practices in:
+- Full-stack TypeScript development
+- Real-time data synchronization
+- Responsive UI design
+- Modern authentication flows
 
