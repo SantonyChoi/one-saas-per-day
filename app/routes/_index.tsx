@@ -25,23 +25,51 @@ export const action: ActionFunction = async ({ request }) => {
 // 보드 목록 페이지 컴포넌트
 export default function BoardsPage() {
   const { boards } = useLoaderData<typeof loader>();
+  
   return (
-    <main className="p-4">
-      <h1 className="text-xl font-bold mb-4">Boards</h1>
-      <ul className="mb-6">
-        {boards.map((board: { id: string; title: string }) => (
-          <li key={board.id}>
-            <Link to={`/boards/${board.id}`} className="text-blue-600 underline">
-              {board.title}
+    <div className="min-h-screen bg-blue-50">
+      <header className="bg-blue-600 text-white p-4 shadow-md">
+        <div className="container mx-auto">
+          <h1 className="text-2xl font-bold">Trello 클론</h1>
+        </div>
+      </header>
+      
+      <main className="container mx-auto p-4">
+        <h2 className="text-xl font-bold text-gray-800 mb-6">내 보드</h2>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+          {boards.map((board: { id: string; title: string }) => (
+            <Link 
+              key={board.id} 
+              to={`/boards/${board.id}`}
+              className="bg-gradient-to-r from-blue-400 to-blue-500 text-white p-4 rounded-md shadow-sm hover:shadow-md transition-shadow h-32 flex items-center justify-center"
+            >
+              <h3 className="text-lg font-semibold">{board.title}</h3>
             </Link>
-          </li>
-        ))}
-      </ul>
-      {/* 새 보드 생성 폼 */}
-      <Form method="post" reloadDocument>
-        <input type="text" name="title" placeholder="New board name" className="border p-1 mr-2" />
-        <button type="submit" className="bg-blue-500 text-white px-3 py-1">Create Board</button>
-      </Form>
-    </main>
+          ))}
+          
+          <div className="border-2 border-dashed border-gray-300 rounded-md h-32 flex items-center justify-center p-4">
+            <Form method="post" reloadDocument className="w-full">
+              <input 
+                type="text" 
+                name="title" 
+                placeholder="새 보드 이름..." 
+                className="w-full border border-gray-300 rounded p-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
+              <button 
+                type="submit" 
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition-colors"
+              >
+                보드 생성
+              </button>
+            </Form>
+          </div>
+        </div>
+      </main>
+      
+      <footer className="container mx-auto p-4 text-center text-gray-500 text-sm">
+        <p>Trello 클론 - Remix + Supabase로 구현</p>
+      </footer>
+    </div>
   );
 }
