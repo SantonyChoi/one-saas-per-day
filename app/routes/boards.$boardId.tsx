@@ -1,6 +1,6 @@
 import { json, redirect } from '@remix-run/node';
 import type { LoaderFunction, ActionFunction } from '@remix-run/node';
-import { useLoaderData, Form } from "@remix-run/react";
+import { useLoaderData, Form, useParams } from "@remix-run/react";
 import { supabase } from '~/utils/supabase.server';
 
 // 데이터 로드 함수
@@ -30,6 +30,7 @@ export const action: ActionFunction = async ({ request, params }) => {
   const formData = await request.formData();
   const listName = formData.get('listName');
   const cardTitle = formData.get('cardTitle');
+  const moveCardId = formData.get('moveCardId');
   
   // ① 새 리스트 추가 폼 제출 처리
   if (typeof listName === 'string' && listName.trim().length > 0) {
@@ -52,19 +53,50 @@ export const action: ActionFunction = async ({ request, params }) => {
     return redirect(`/boards/${boardId}`);
   }
   
-  // ③ (예비) 카드 이동 처리는 다음 단계에서 추가
+  // ③ 카드 이동 처리
+  if (typeof moveCardId === 'string') {
+    const targetListId = formData.get('targetListId');
+    if (typeof targetListId === 'string') {
+      const { error } = await supabase.from('cards')
+        .update({ list_id: targetListId })
+        .eq('id', moveCardId);
+      if (error) throw new Response(error.message, { status: 500 });
+    }
+    return new Response(null, { status: 204 });
+  }
+  
   return null;
 };
 
 // 보드 상세 페이지 컴포넌트
 export default function BoardDetailPage() {
   const { lists, cards } = useLoaderData<typeof loader>();
+  const params = useParams();
+  const boardId = params.boardId;
+
   return (
     <main className="p-4">
       <h2 className="text-lg font-bold mb-4">Board Details</h2>
       <div className="flex space-x-4 overflow-x-auto">
         {lists.map((list: { id: string; name: string }) => (
-          <div key={list.id} className="w-64 bg-gray-100 p-3 rounded" >
+          <div 
+            key={list.id} 
+            className="w-64 bg-gray-100 p-3 rounded" 
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={async (e) => {
+              e.preventDefault();
+              const cardId = e.dataTransfer.getData('text/plain');
+              const targetListId = list.id;
+              if (cardId) {
+                // 드롭된 카드의 list_id 업데이트 요청
+                await fetch(`/boards/${boardId}`, {
+                  method: "POST",
+                  body: new URLSearchParams({ moveCardId: cardId, targetListId: targetListId })
+                });
+                window.location.reload();
+              }
+            }}
+          >
             <h3 className="font-semibold mb-2">{list.name}</h3>
             <ul className="mb-2">
               {cards
