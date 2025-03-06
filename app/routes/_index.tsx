@@ -1,5 +1,5 @@
-// app/routes/index.tsx (요약)
-import { json } from '@remix-run/node';
+// app/routes/_index.tsx - 보드 목록 페이지
+import { json, redirect } from '@remix-run/node';
 import type { LoaderFunction, ActionFunction } from '@remix-run/node';
 import { useLoaderData, Link, Form } from "@remix-run/react";
 import { supabase } from '~/utils/supabase.server';
@@ -19,7 +19,7 @@ export const action: ActionFunction = async ({ request }) => {
     const { error } = await supabase.from('boards').insert({ title });
     if (error) throw new Response(error.message, { status: 500 });
   }
-  return new Response("", { status: 302, headers: { Location: "/" } });
+  return redirect('/');
 };
 
 // 보드 목록 페이지 컴포넌트
