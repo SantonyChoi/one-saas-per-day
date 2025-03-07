@@ -9,8 +9,11 @@ import {
 } from "@remix-run/react";
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
 
+// Import Tailwind CSS
+import styles from "./tailwind.css";
+
 export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: "/tailwind.css" },
+  { rel: "stylesheet", href: styles },
   { rel: "icon", href: "/favicon.ico" },
 ];
 
@@ -24,7 +27,7 @@ export const meta: MetaFunction = () => {
 
 export default function App() {
   return (
-    <html lang="ko">
+    <html lang="en">
       <head>
         <Meta />
         <Links />
