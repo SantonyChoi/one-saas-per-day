@@ -1,4 +1,4 @@
-import { collaboratorDb, noteDb } from '../db/database.js';
+import db from '../db/database.js';
 
 export interface Collaborator {
   id: number;
@@ -18,28 +18,39 @@ export interface CollaboratorInput {
 export const addCollaborator = (collaboratorData: CollaboratorInput): number => {
   const { note_id, user_id, permission = 'read' } = collaboratorData;
   
-  return collaboratorDb.create({
-    note_id,
-    user_id,
-    permission
-  });
+  const stmt = db.prepare(`
+    INSERT INTO collaborators (note_id, user_id, permission)
+    VALUES (?, ?, ?)
+  `);
+  
+  const result = stmt.run(note_id, user_id, permission);
+  return result.lastInsertRowid as number;
 };
 
 // Get all collaborators for a note
 export const getCollaboratorsByNoteId = (noteId: number): Collaborator[] => {
-  return collaboratorDb.getByNoteId(noteId);
+  const stmt = db.prepare(`
+    SELECT c.*, u.email, u.name
+    FROM collaborators c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.note_id = ?
+  `);
+  
+  return stmt.all(noteId) as Collaborator[];
 };
 
 // Get all notes a user is collaborating on
 export const getCollaborativeNotes = (userId: number): any[] => {
-  // 간단한 구현: 사용자가 협업자로 등록된 노트 ID 목록을 가져옵니다.
-  const collaborations = collaboratorDb.getByUserId(userId);
+  const stmt = db.prepare(`
+    SELECT n.*, c.permission, u.email as owner_email, u.name as owner_name
+    FROM notes n
+    JOIN collaborators c ON n.id = c.note_id
+    JOIN users u ON n.user_id = u.id
+    WHERE c.user_id = ?
+    ORDER BY n.updated_at DESC
+  `);
   
-  // 각 노트의 상세 정보를 가져옵니다.
-  return collaborations.map(collab => {
-    const note = noteDb.getById(collab.note_id);
-    return note ? { ...note, permission: collab.permission } : null;
-  }).filter(Boolean);
+  return stmt.all(userId);
 };
 
 // Update a collaborator's permission
@@ -48,34 +59,44 @@ export const updateCollaboratorPermission = (
   userId: number,
   permission: 'read' | 'write' | 'admin'
 ): boolean => {
-  // 간단한 구현: 해당 협업자를 찾아 권한을 업데이트합니다.
-  const collaborations = collaboratorDb.getByNoteId(noteId);
-  const collaboration = collaborations.find(c => c.user_id === userId);
+  const stmt = db.prepare(`
+    UPDATE collaborators
+    SET permission = ?
+    WHERE note_id = ? AND user_id = ?
+  `);
   
-  if (!collaboration) return false;
-  
-  return collaboratorDb.update(collaboration.id, { permission });
+  const result = stmt.run(permission, noteId, userId);
+  return result.changes > 0;
 };
 
 // Remove a collaborator from a note
 export const removeCollaborator = (noteId: number, userId: number): boolean => {
-  // 간단한 구현: 해당 협업자를 찾아 삭제합니다.
-  const collaborations = collaboratorDb.getByNoteId(noteId);
-  const collaboration = collaborations.find(c => c.user_id === userId);
+  const stmt = db.prepare(`
+    DELETE FROM collaborators
+    WHERE note_id = ? AND user_id = ?
+  `);
   
-  if (!collaboration) return false;
-  
-  return collaboratorDb.delete(collaboration.id);
+  const result = stmt.run(noteId, userId);
+  return result.changes > 0;
 };
 
 // Check if a user is a collaborator on a note
 export const isCollaborator = (noteId: number, userId: number): Collaborator | undefined => {
-  const collaborations = collaboratorDb.getByNoteId(noteId);
-  return collaborations.find(c => c.user_id === userId);
+  const stmt = db.prepare(`
+    SELECT * FROM collaborators
+    WHERE note_id = ? AND user_id = ?
+  `);
+  
+  return stmt.get(noteId, userId) as Collaborator | undefined;
 };
 
 // Check if a user has write permission on a note
 export const hasWritePermission = (noteId: number, userId: number): boolean => {
-  const collaboration = isCollaborator(noteId, userId);
-  return collaboration ? ['write', 'admin'].includes(collaboration.permission) : false;
+  const stmt = db.prepare(`
+    SELECT permission FROM collaborators
+    WHERE note_id = ? AND user_id = ?
+  `);
+  
+  const result = stmt.get(noteId, userId) as { permission: string } | undefined;
+  return result ? ['write', 'admin'].includes(result.permission) : false;
 }; 

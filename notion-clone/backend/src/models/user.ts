@@ -1,4 +1,4 @@
-import { userDb } from '../db/database.js';
+import db from '../db/database.js';
 import bcrypt from 'bcrypt';
 
 export interface User {
@@ -24,35 +24,58 @@ export const createUser = async (userData: UserInput): Promise<number> => {
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   
   // Insert the user into the database
-  return userDb.create({
-    email,
-    password: hashedPassword,
-    name: name || null
-  });
+  const stmt = db.prepare(`
+    INSERT INTO users (email, password, name)
+    VALUES (?, ?, ?)
+  `);
+  
+  const result = stmt.run(email, hashedPassword, name || null);
+  return result.lastInsertRowid as number;
 };
 
 export const getUserByEmail = (email: string): User | undefined => {
-  return userDb.getByEmail(email);
+  const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
+  return stmt.get(email) as User | undefined;
 };
 
 export const getUserById = (id: number): User | undefined => {
-  return userDb.getById(id);
+  const stmt = db.prepare('SELECT * FROM users WHERE id = ?');
+  return stmt.get(id) as User | undefined;
 };
 
 export const verifyPassword = async (plainPassword: string, hashedPassword: string): Promise<boolean> => {
   return await bcrypt.compare(plainPassword, hashedPassword);
 };
 
-// 이 데모 버전에서는 사용자 업데이트 기능이 구현되지 않았습니다.
-// 실제 애플리케이션에서는 이 기능을 구현해야 합니다.
-/*
 export const updateUser = (id: number, userData: Partial<UserInput>): boolean => {
-  // 구현 필요
-  return false;
+  const { email, name } = userData;
+  
+  // Update the user in the database
+  const stmt = db.prepare(`
+    UPDATE users
+    SET email = COALESCE(?, email),
+        name = COALESCE(?, name),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+  
+  const result = stmt.run(email, name, id);
+  return result.changes > 0;
 };
 
 export const updatePassword = async (id: number, newPassword: string): Promise<boolean> => {
-  // 구현 필요
-  return false;
-};
-*/ 
+  // Hash the new password
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+  
+  // Update the password in the database
+  const stmt = db.prepare(`
+    UPDATE users
+    SET password = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+  
+  const result = stmt.run(hashedPassword, id);
+  return result.changes > 0;
+}; 
