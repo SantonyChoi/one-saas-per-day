@@ -2,8 +2,8 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# package.json 파일 복사
-COPY package.json ./
+# package.json과 package-lock.json 파일 복사
+COPY package*.json ./
 
 # 필요한 패키지 설치
 RUN npm install
