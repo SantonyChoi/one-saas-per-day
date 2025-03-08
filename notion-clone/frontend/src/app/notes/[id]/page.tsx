@@ -33,6 +33,8 @@ const NoteDetailPage: React.FC = () => {
   const [isAddingCollaborator, setIsAddingCollaborator] = useState(false);
   const [collaboratorEmail, setCollaboratorEmail] = useState('');
   const [collaboratorPermission, setCollaboratorPermission] = useState<'read' | 'write' | 'admin'>('read');
+  const [hasAccess, setHasAccess] = useState(false);
+  const [userPermission, setUserPermission] = useState<'read' | 'write' | 'admin' | 'owner' | null>(null);
   
   const router = useRouter();
   const params = useParams();
@@ -69,6 +71,38 @@ const NoteDetailPage: React.FC = () => {
           setContent(response.note.content || '');
           setCategory(response.note.category || '');
           setIsPublic(response.note.is_public);
+          
+          // Determine user permissions and access
+          let userHasAccess = false;
+          let permission: 'read' | 'write' | 'admin' | 'owner' | null = null;
+          
+          // Check if user is the owner
+          if (response.note.user_id === user.id) {
+            userHasAccess = true;
+            permission = 'owner';
+          } 
+          // Check if user is a collaborator
+          else if (response.collaborators) {
+            const userCollaborator = response.collaborators.find((c: Collaborator) => c.user_id === user.id);
+            if (userCollaborator) {
+              userHasAccess = true;
+              permission = userCollaborator.permission;
+            }
+          }
+          
+          // Check if note is public (read-only access for non-collaborators)
+          if (!userHasAccess && response.note.is_public) {
+            userHasAccess = true;
+            permission = 'read';
+          }
+          
+          setHasAccess(userHasAccess);
+          setUserPermission(permission);
+          
+          // Force preview mode for read-only users
+          if (permission === 'read') {
+            setShowPreview(true);
+          }
           
           if (response.collaborators) {
             setCollaborators(response.collaborators);
@@ -131,6 +165,13 @@ const NoteDetailPage: React.FC = () => {
     
     return () => clearTimeout(timer);
   }, [content, title, noteId, note, user]);
+  
+  // Force preview mode for read-only users
+  useEffect(() => {
+    if (userPermission === 'read') {
+      setShowPreview(true);
+    }
+  }, [userPermission]);
   
   // Save note
   const handleSave = async () => {
@@ -260,7 +301,54 @@ const NoteDetailPage: React.FC = () => {
     );
   }
   
+  // Show access denied page if user doesn't have access
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <div className="px-4 py-6 sm:px-0">
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <div className="text-center py-12">
+                  <svg 
+                    className="mx-auto h-16 w-16 text-red-500" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor" 
+                    aria-hidden="true"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth="2" 
+                      d="M12 15v2m0 0v2m0-2h2m-2 0H9m3-4V7a3 3 0 00-3-3H6a3 3 0 00-3 3v7m14-7a3 3 0 00-3-3h-3a3 3 0 00-3 3v7m14 0h-3" 
+                    />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900">Access Denied</h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    You don't have permission to access this note.
+                  </p>
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      onClick={() => router.push('/notes')}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Go to My Notes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+  
   const isOwner = user && note.user_id === user.id;
+  const canEdit = userPermission === 'owner' || userPermission === 'admin' || userPermission === 'write';
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -274,23 +362,25 @@ const NoteDetailPage: React.FC = () => {
             </h1>
             
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPreview(!showPreview)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                {showPreview ? (
-                  <>
-                    <FiEdit className="mr-2 -ml-1 h-5 w-5 text-gray-500" />
-                    Edit
-                  </>
-                ) : (
-                  <>
-                    <FiEye className="mr-2 -ml-1 h-5 w-5 text-gray-500" />
-                    Preview
-                  </>
-                )}
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  {showPreview ? (
+                    <>
+                      <FiEdit className="mr-2 -ml-1 h-5 w-5 text-gray-500" />
+                      Edit
+                    </>
+                  ) : (
+                    <>
+                      <FiEye className="mr-2 -ml-1 h-5 w-5 text-gray-500" />
+                      Preview
+                    </>
+                  )}
+                </button>
+              )}
               
               {isOwner && (
                 <button
@@ -312,17 +402,19 @@ const NoteDetailPage: React.FC = () => {
                 </button>
               )}
               
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={isSaving}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  isSaving ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-              >
-                <FiSave className="mr-2 -ml-1 h-5 w-5" />
-                {isSaving ? 'Saving...' : 'Save'}
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    isSaving ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <FiSave className="mr-2 -ml-1 h-5 w-5" />
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+              )}
             </div>
           </div>
           
@@ -338,7 +430,7 @@ const NoteDetailPage: React.FC = () => {
           
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-3">
-              {showPreview ? (
+              {showPreview || !canEdit ? (
                 <div className="bg-white shadow overflow-hidden sm:rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">{title}</h2>
