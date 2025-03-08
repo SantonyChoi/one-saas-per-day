@@ -13,11 +13,9 @@ services:
       - COOKIE_SECRET=your_cookie_secret_key_change_in_production
       - NODE_ENV=development
     volumes:
-      - ./backend:/app:delegated
-      - ./backend/node_modules:/app/node_modules
       - ./backend/data:/app/data
     restart: unless-stopped
-    command: npm run dev
+    command: ./main
 
   # Frontend service
   frontend:

@@ -17,7 +17,7 @@ services:
     volumes:
       - ./backend/data:/app/data
     restart: always
-    command: npm start
+    command: ./main
 
   # Frontend service
   frontend:

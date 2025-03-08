@@ -1,21 +1,41 @@
-FROM node:20-alpine
+FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
-# package.json 파일 복사
-COPY package.json ./
+# Install build dependencies
+RUN apk add --no-cache gcc musl-dev
 
-# 필요한 패키지 설치
-RUN npm install
+# Copy go.mod and go.sum files
+COPY go.mod go.sum ./
 
-# 소스 코드 복사
-COPY . .
+# Download dependencies
+RUN go mod download
 
-# 데이터 디렉토리 생성
-RUN mkdir -p /app/data && chmod 777 /app/data
+# Copy the source code
+COPY *.go ./
 
-# 포트 노출
+# Build the application
+RUN CGO_ENABLED=1 GOOS=linux go build -o main .
+
+# Create a smaller image for the final application
+FROM alpine:latest
+
+# Install required dependencies for SQLite
+RUN apk --no-cache add ca-certificates libc6-compat
+
+WORKDIR /app
+
+# Copy the binary from the builder stage
+COPY --from=builder /app/main .
+
+# Copy the .env file
+COPY .env ./
+
+# Create data directory
+RUN mkdir -p /app/data
+
+# Expose the port
 EXPOSE 4000
 
-# 개발 모드로 애플리케이션 시작
-CMD ["npm", "run", "dev"] 
+# Run the application
+CMD ["./main"] 
