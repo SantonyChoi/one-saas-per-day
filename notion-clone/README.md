@@ -1,6 +1,6 @@
 # Notion Clone
 
-A collaborative note-taking application similar to Notion, built with Next.js, Express.js, and SQLite.
+A collaborative note-taking application similar to Notion, built with Next.js, Golang, and SQLite.
 
 ## Features
 
@@ -22,8 +22,8 @@ A collaborative note-taking application similar to Notion, built with Next.js, E
 - React Markdown (for rendering markdown)
 
 ### Backend
-- Express.js (Node.js framework)
-- TypeScript
+- Golang
+- Gin (Web framework)
 - SQLite (database)
 - Socket.IO (for real-time collaboration)
 - JWT (for authentication)
@@ -32,7 +32,8 @@ A collaborative note-taking application similar to Notion, built with Next.js, E
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v18 or higher) for frontend
+- Go (v1.21 or higher) for backend
 - npm (v8 or higher)
 - Docker and Docker Compose (optional, for containerized setup)
 
@@ -46,14 +47,18 @@ A collaborative note-taking application similar to Notion, built with Next.js, E
    cd notion-clone
    ```
 
-2. Install dependencies:
+2. Install frontend dependencies:
    ```bash
    npm install
    cd frontend && npm install
-   cd ../backend && npm install
    ```
 
-3. Create a `.env` file in the `backend` directory:
+3. Install backend dependencies:
+   ```bash
+   cd ../backend && go mod download
+   ```
+
+4. Create a `.env` file in the `backend` directory:
    ```
    PORT=4000
    JWT_SECRET=your_jwt_secret_key_change_in_production
@@ -61,14 +66,19 @@ A collaborative note-taking application similar to Notion, built with Next.js, E
    NODE_ENV=development
    ```
 
-4. Start the development server:
+5. Start the development servers:
+   
+   For frontend:
    ```bash
-   npm run dev
+   npm run dev:frontend
+   ```
+   
+   For backend:
+   ```bash
+   cd backend && go run *.go
    ```
 
-   This will start both the frontend and backend servers concurrently.
-
-5. Open your browser and navigate to `http://localhost:3000`.
+6. Open your browser and navigate to `http://localhost:3000`.
 
 #### Option 2: Docker Compose
 
@@ -102,9 +112,7 @@ If you encounter issues with Docker Compose, try the following:
    docker compose version
    ```
 
-2. If you get errors about missing package.json files, the Dockerfiles are designed to handle this automatically.
-
-3. If you need to rebuild the containers:
+2. If you need to rebuild the containers:
    ```bash
    docker compose down
    docker compose build --no-cache
@@ -130,20 +138,18 @@ If you encounter issues with Docker Compose, try the following:
 
 ```
 notion-clone/
-├── backend/                # Backend server
-│   ├── src/
-│   │   ├── controllers/    # Request handlers
-│   │   ├── db/             # Database setup
-│   │   ├── middleware/     # Express middleware
-│   │   ├── models/         # Data models
-│   │   ├── routes/         # API routes
-│   │   ├── socket/         # Socket.IO handlers
-│   │   └── index.ts        # Server entry point
+├── backend/                # Golang backend server
+│   ├── main.go             # Main entry point
+│   ├── db.go               # Database setup
+│   ├── models.go           # Data models
+│   ├── auth.go             # Authentication handlers
+│   ├── notes.go            # Note handlers
+│   ├── collaborators.go    # Collaborator handlers
+│   ├── socket.go           # Socket.IO handlers
 │   ├── .env                # Environment variables
 │   ├── Dockerfile          # Development Docker configuration
 │   ├── Dockerfile.prod     # Production Docker configuration
-│   ├── package.json        # Backend dependencies
-│   └── tsconfig.json       # TypeScript configuration
+│   └── go.mod              # Go dependencies
 ├── frontend/               # Next.js frontend
 │   ├── src/
 │   │   ├── app/            # Next.js app router
@@ -164,7 +170,7 @@ notion-clone/
 ## Implementation Details
 
 ### Authentication
-- JWT-based authentication with secure HTTP-only cookies
+- JWT-based authentication
 - Password hashing with bcrypt
 - Protected routes on both frontend and backend
 
@@ -186,7 +192,7 @@ This project is licensed under the ISC License.
 ## Acknowledgements
 
 - [Next.js](https://nextjs.org/)
-- [Express.js](https://expressjs.com/)
+- [Gin](https://gin-gonic.com/)
 - [Socket.IO](https://socket.io/)
 - [SQLite](https://www.sqlite.org/)
 - [Tailwind CSS](https://tailwindcss.com/) 
