@@ -96,6 +96,13 @@ export const onCursorMoved = (callback: (data: CursorMovedEvent) => void): void 
   }
 };
 
+// Listen for error events
+export const onSocketError = (callback: (error: any) => void): void => {
+  if (socket) {
+    socket.on('error', callback);
+  }
+};
+
 // Remove event listeners
 export const removeEventListeners = (): void => {
   if (socket) {
@@ -103,5 +110,6 @@ export const removeEventListeners = (): void => {
     socket.off('user-left');
     socket.off('content-updated');
     socket.off('cursor-moved');
+    socket.off('error');
   }
 }; 

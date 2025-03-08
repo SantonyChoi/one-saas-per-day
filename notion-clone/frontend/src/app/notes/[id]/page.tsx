@@ -15,6 +15,7 @@ import {
   onContentUpdated, 
   onUserJoined, 
   onUserLeft, 
+  onSocketError,
   removeEventListeners 
 } from '@/lib/socket';
 import ReactMarkdown from 'react-markdown';
@@ -80,13 +81,42 @@ const NoteDetailPage: React.FC = () => {
           if (response.note.user_id === user.id) {
             userHasAccess = true;
             permission = 'owner';
+            
+            if (response.collaborators) {
+              setCollaborators(response.collaborators);
+            }
           } 
-          // Check if user is a collaborator
-          else if (response.collaborators) {
-            const userCollaborator = response.collaborators.find((c: Collaborator) => c.user_id === user.id);
-            if (userCollaborator) {
-              userHasAccess = true;
-              permission = userCollaborator.permission;
+          // If not owner, check if user is a collaborator
+          else {
+            try {
+              // Get all notes the user is collaborating on
+              const sharedNotesResponse = await collaboratorsAPI.getCollaborativeNotes();
+              
+              if (!sharedNotesResponse.error && sharedNotesResponse.notes) {
+                // Find the current note in the shared notes
+                const sharedNote = sharedNotesResponse.notes.find(
+                  (n: any) => n.id === noteId
+                );
+                
+                if (sharedNote && sharedNote.permission) {
+                  userHasAccess = true;
+                  permission = sharedNote.permission;
+                  
+                  // Since we can't get collaborators directly, we'll create a minimal entry for the current user
+                  setCollaborators([
+                    {
+                      id: 0, // Placeholder ID
+                      note_id: noteId,
+                      user_id: user.id,
+                      permission: sharedNote.permission,
+                      email: user.email,
+                      name: user.name || ''
+                    }
+                  ]);
+                }
+              }
+            } catch (err) {
+              console.error('Error fetching collaborative notes:', err);
             }
           }
           
@@ -136,6 +166,17 @@ const NoteDetailPage: React.FC = () => {
             onUserLeft((data) => {
               setActiveUsers((prev) => prev.filter((u) => u.userId !== data.userId));
             });
+            
+            // Listen for error events
+            onSocketError((error) => {
+              console.error('Socket error:', error);
+              setError(error.message || 'An error occurred');
+              
+              // If permission error, force preview mode
+              if (error.message?.includes('permission')) {
+                setShowPreview(true);
+              }
+            });
           }
         }
       } catch (err) {
@@ -159,12 +200,15 @@ const NoteDetailPage: React.FC = () => {
   useEffect(() => {
     if (!note || !user) return;
     
-    const timer = setTimeout(() => {
-      updateNoteContent(noteId, content, title);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [content, title, noteId, note, user]);
+    // Only update content if user has edit permissions
+    if (userPermission === 'owner' || userPermission === 'admin' || userPermission === 'write') {
+      const timer = setTimeout(() => {
+        updateNoteContent(noteId, content, title);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [content, title, noteId, note, user, userPermission]);
   
   // Force preview mode for read-only users
   useEffect(() => {
@@ -173,6 +217,23 @@ const NoteDetailPage: React.FC = () => {
     }
   }, [userPermission]);
   
+  // Display error message when socket error occurs
+  useEffect(() => {
+    onSocketError((error) => {
+      console.error('Socket error:', error);
+      setError(error.message || 'An error occurred');
+      
+      // If permission error, force preview mode
+      if (error.message?.includes('permission')) {
+        setShowPreview(true);
+      }
+    });
+    
+    return () => {
+      // Clean up error handler is handled by removeEventListeners
+    };
+  }, []);
+  
   // Save note
   const handleSave = async () => {
     if (!title) {
@@ -180,10 +241,17 @@ const NoteDetailPage: React.FC = () => {
       return;
     }
     
+    // Check if user has permission to save
+    if (userPermission !== 'owner' && userPermission !== 'admin' && userPermission !== 'write') {
+      setError('You do not have permission to edit this note');
+      return;
+    }
+    
     setIsSaving(true);
     setError(null);
     
     try {
+      console.log('Saving note with permission:', userPermission);
       const response = await notesAPI.updateNote(noteId, {
         title,
         content,
