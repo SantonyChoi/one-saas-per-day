@@ -148,9 +148,7 @@ export const collaboratorsAPI = {
     fetchAPI<NotesResponse>("/collaborators/shared-with-me"),
 
   getNoteCollaborators: (noteId: number) =>
-    fetchAPI<CollaboratorsResponse>(
-      `/collaborators/notes/${noteId}/collaborators`
-    ),
+    fetchAPI<CollaboratorsResponse>(`/collaborators/note/${noteId}`),
 
   addCollaborator: (
     noteId: number,
@@ -158,7 +156,7 @@ export const collaboratorsAPI = {
     permission: "read" | "write" | "admin" = "read"
   ) =>
     fetchAPI<ApiResponse<{ success: boolean }>>(
-      `/collaborators/notes/${noteId}/collaborators`,
+      `/collaborators/note/${noteId}`,
       {
         method: "POST",
         body: JSON.stringify({ email, permission }),
@@ -171,7 +169,7 @@ export const collaboratorsAPI = {
     permission: "read" | "write" | "admin"
   ) =>
     fetchAPI<ApiResponse<{ success: boolean }>>(
-      `/collaborators/notes/${noteId}/collaborators/${userId}`,
+      `/collaborators/note/${noteId}/user/${userId}`,
       {
         method: "PUT",
         body: JSON.stringify({ permission }),
@@ -180,7 +178,7 @@ export const collaboratorsAPI = {
 
   removeCollaborator: (noteId: number, userId: number) =>
     fetchAPI<ApiResponse<{ success: boolean }>>(
-      `/collaborators/notes/${noteId}/collaborators/${userId}`,
+      `/collaborators/note/${noteId}/user/${userId}`,
       {
         method: "DELETE",
       }
