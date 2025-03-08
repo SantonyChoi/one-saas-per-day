@@ -10,7 +10,7 @@ let socket: Socket | null = null;
 export const initializeSocket = (token: string): Socket => {
   if (socket) return socket;
   
-  const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+  const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'ws://localhost:4000';
   
   socket = io(SOCKET_URL, {
     auth: { token },
