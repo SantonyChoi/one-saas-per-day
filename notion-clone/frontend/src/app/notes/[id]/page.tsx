@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { notesAPI, collaboratorsAPI } from '@/lib/api';
 import { Note, Collaborator } from '@/types';
 import Navbar from '@/components/Navbar';
-import { FiSave, FiShare2, FiUsers, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiSave, FiShare2, FiUsers, FiEye, FiEyeOff, FiEdit } from 'react-icons/fi';
 import { 
   initializeSocket, 
   joinNote, 
