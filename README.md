@@ -22,6 +22,18 @@ A personal project where I build one SaaS application per day with the help of A
    - A task management application similar to Trello
    - [View Project](https://github.com/SantonyChoi/one-saas-per-day/tree/main/trello-clone)
 
+2. **Slack Clone**
+   - A real-time messaging application similar to Slack
+   - [View Project](https://github.com/SantonyChoi/one-saas-per-day/tree/main/slack-clone)
+
+3. **Dropbox Clone**
+   - A file storage and sharing application similar to Dropbox
+   - [View Project](https://github.com/SantonyChoi/one-saas-per-day/tree/main/dropbox-clone)
+
+4. **Notion Clone**
+   - A collaborative note-taking application similar to Notion
+   - [View Project](https://github.com/SantonyChoi/one-saas-per-day/tree/main/notion-clone)
+
 *More projects coming soon!*
 
 ## 🤝 Contributing
@@ -47,4 +59,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*This is a personal learning project. New SaaS applications will be added as I continue my journey with AI-assisted development.* 
+*This is a personal learning project. New SaaS applications will be added as I continue my journey with AI-assisted development.*
