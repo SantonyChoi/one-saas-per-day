@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --loader ts-node/esm src/index.ts",
+    "dev": "tsx src/index.ts",
     "dev:watch": "nodemon --watch src --ext ts --exec \"node --loader ts-node/esm src/index.ts\"",
     "dev:simple": "node --loader ts-node/esm src/simple-server.ts",
     "build": "tsc",
