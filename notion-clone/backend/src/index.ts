@@ -1,10 +1,7 @@
-import express from 'express';
-import http from 'http';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
@@ -14,15 +11,9 @@ import authRoutes from './routes/auth.js';
 import notesRoutes from './routes/notes.js';
 import collaboratorsRoutes from './routes/collaborators.js';
 
-// Import socket.io initialization
-import { initializeSocketIO } from './socket/index.js';
-
 // Create Express app
 const app = express();
-const server = http.createServer(app);
-
-// Initialize Socket.IO
-const io = initializeSocketIO(server);
+const PORT = process.env.PORT || 4000;
 
 // Middleware
 app.use(cors({
@@ -39,29 +30,18 @@ app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/collaborators', collaboratorsRoutes);
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  // Get the directory name
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  
-  // Serve static files from the frontend build directory
-  app.use(express.static(path.join(__dirname, '../../frontend/out')));
-  
-  // Handle all other routes by serving the index.html file
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../frontend/out/index.html'));
-  });
-}
+// Simple test route
+app.get('/api/test', (req: Request, res: Response) => {
+  res.json({ message: 'Backend server is running!' });
+});
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
 // Start the server
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 

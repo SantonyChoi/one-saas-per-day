@@ -1,4 +1,4 @@
-import db from '../db/database.js';
+import { noteDb } from '../db/database.js';
 
 export interface Note {
   id: number;
@@ -28,109 +28,51 @@ export interface NoteUpdate {
 
 // Create a new note
 export const createNote = (noteData: NoteInput): number => {
-  const { title, content, user_id, category, is_public } = noteData;
-  
-  const stmt = db.prepare(`
-    INSERT INTO notes (title, content, user_id, category, is_public)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  
-  const result = stmt.run(
-    title,
-    content || null,
-    user_id,
-    category || null,
-    is_public !== undefined ? is_public : false
-  );
-  
-  return result.lastInsertRowid as number;
+  return noteDb.create({
+    ...noteData,
+    content: noteData.content || null,
+    category: noteData.category || null,
+    is_public: noteData.is_public || false
+  });
 };
 
 // Get a note by ID
 export const getNoteById = (id: number): Note | undefined => {
-  const stmt = db.prepare('SELECT * FROM notes WHERE id = ?');
-  return stmt.get(id) as Note | undefined;
+  return noteDb.getById(id);
 };
 
 // Get all notes for a user
 export const getNotesByUserId = (userId: number): Note[] => {
-  const stmt = db.prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY updated_at DESC');
-  return stmt.all(userId) as Note[];
+  return noteDb.getByUserId(userId);
 };
 
 // Get notes by category for a user
 export const getNotesByCategory = (userId: number, category: string): Note[] => {
-  const stmt = db.prepare('SELECT * FROM notes WHERE user_id = ? AND category = ? ORDER BY updated_at DESC');
-  return stmt.all(userId, category) as Note[];
+  return noteDb.getByUserId(userId).filter(note => note.category === category);
 };
 
 // Search notes by title or content for a user
 export const searchNotes = (userId: number, query: string): Note[] => {
-  const searchQuery = `%${query}%`;
-  const stmt = db.prepare(`
-    SELECT * FROM notes 
-    WHERE user_id = ? AND (title LIKE ? OR content LIKE ?) 
-    ORDER BY updated_at DESC
-  `);
-  
-  return stmt.all(userId, searchQuery, searchQuery) as Note[];
+  const lowercaseQuery = query.toLowerCase();
+  return noteDb.getByUserId(userId).filter(note => 
+    note.title.toLowerCase().includes(lowercaseQuery) || 
+    (note.content && note.content.toLowerCase().includes(lowercaseQuery)) ||
+    (note.category && note.category.toLowerCase().includes(lowercaseQuery))
+  );
 };
 
 // Update a note
 export const updateNote = (id: number, noteData: NoteUpdate): boolean => {
-  const { title, content, category, is_public } = noteData;
-  
-  const stmt = db.prepare(`
-    UPDATE notes
-    SET title = COALESCE(?, title),
-        content = COALESCE(?, content),
-        category = COALESCE(?, category),
-        is_public = COALESCE(?, is_public),
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `);
-  
-  const result = stmt.run(
-    title,
-    content,
-    category,
-    is_public !== undefined ? is_public : undefined,
-    id
-  );
-  
-  return result.changes > 0;
+  return noteDb.update(id, noteData);
 };
 
 // Delete a note
 export const deleteNote = (id: number): boolean => {
-  const stmt = db.prepare('DELETE FROM notes WHERE id = ?');
-  const result = stmt.run(id);
-  return result.changes > 0;
+  return noteDb.delete(id);
 };
 
 // Check if a user has access to a note
 export const userHasAccessToNote = (userId: number, noteId: number): boolean => {
-  // Check if the user is the owner of the note
-  const ownerStmt = db.prepare(`
-    SELECT 1 FROM notes WHERE id = ? AND user_id = ?
-  `);
-  
-  const isOwner = ownerStmt.get(noteId, userId);
-  if (isOwner) return true;
-  
-  // Check if the user is a collaborator
-  const collaboratorStmt = db.prepare(`
-    SELECT 1 FROM collaborators WHERE note_id = ? AND user_id = ?
-  `);
-  
-  const isCollaborator = collaboratorStmt.get(noteId, userId);
-  if (isCollaborator) return true;
-  
-  // Check if the note is public
-  const publicStmt = db.prepare(`
-    SELECT 1 FROM notes WHERE id = ? AND is_public = 1
-  `);
-  
-  const isPublic = publicStmt.get(noteId);
-  return !!isPublic;
+  const note = noteDb.getById(noteId);
+  return note ? note.user_id === userId : false;
 }; 

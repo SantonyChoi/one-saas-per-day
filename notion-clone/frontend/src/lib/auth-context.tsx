@@ -1,5 +1,7 @@
+"use client";
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '@/types';
+import { User, AuthResponse } from '@/types';
 import { authAPI } from './api';
 import { initializeSocket, disconnectSocket } from './socket';
 

@@ -1,3 +1,5 @@
+"use client";
+
 import { io, Socket } from 'socket.io-client';
 import { ContentUpdatedEvent, CursorMovedEvent, UserJoinedEvent } from '@/types';
 

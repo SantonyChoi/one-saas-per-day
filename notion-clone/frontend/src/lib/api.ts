@@ -1,4 +1,6 @@
-import { ApiResponse } from '@/types';
+"use client";
+
+import { ApiResponse, AuthResponse, NotesResponse, NoteResponse, CollaboratorsResponse } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -44,24 +46,24 @@ async function fetchAPI<T>(
 // Auth API
 export const authAPI = {
   register: (email: string, password: string, name?: string) => 
-    fetchAPI('/auth/register', {
+    fetchAPI<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     }),
     
   login: (email: string, password: string) => 
-    fetchAPI('/auth/login', {
+    fetchAPI<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
     
   logout: () => 
-    fetchAPI('/auth/logout', {
+    fetchAPI<AuthResponse>('/auth/logout', {
       method: 'POST',
     }),
     
   getCurrentUser: () => 
-    fetchAPI('/auth/me'),
+    fetchAPI<AuthResponse>('/auth/me'),
 };
 
 // Notes API
@@ -76,26 +78,26 @@ export const notesAPI = {
     const queryString = params.toString();
     if (queryString) endpoint += `?${queryString}`;
     
-    return fetchAPI(endpoint);
+    return fetchAPI<NotesResponse>(endpoint);
   },
   
   getNoteById: (id: number) => 
-    fetchAPI(`/notes/${id}`),
+    fetchAPI<NoteResponse>(`/notes/${id}`),
     
   createNote: (title: string, content?: string, category?: string, is_public?: boolean) => 
-    fetchAPI('/notes', {
+    fetchAPI<NoteResponse>('/notes', {
       method: 'POST',
       body: JSON.stringify({ title, content, category, is_public }),
     }),
     
   updateNote: (id: number, data: { title?: string; content?: string; category?: string; is_public?: boolean }) => 
-    fetchAPI(`/notes/${id}`, {
+    fetchAPI<NoteResponse>(`/notes/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
     
   deleteNote: (id: number) => 
-    fetchAPI(`/notes/${id}`, {
+    fetchAPI<ApiResponse<{ success: boolean }>>(`/notes/${id}`, {
       method: 'DELETE',
     }),
 };
@@ -103,25 +105,25 @@ export const notesAPI = {
 // Collaborators API
 export const collaboratorsAPI = {
   getCollaborativeNotes: () => 
-    fetchAPI('/collaborators/shared-with-me'),
+    fetchAPI<NotesResponse>('/collaborators/shared-with-me'),
     
   getNoteCollaborators: (noteId: number) => 
-    fetchAPI(`/collaborators/notes/${noteId}/collaborators`),
+    fetchAPI<CollaboratorsResponse>(`/collaborators/notes/${noteId}/collaborators`),
     
   addCollaborator: (noteId: number, email: string, permission: 'read' | 'write' | 'admin' = 'read') => 
-    fetchAPI(`/collaborators/notes/${noteId}/collaborators`, {
+    fetchAPI<ApiResponse<{ success: boolean }>>(`/collaborators/notes/${noteId}/collaborators`, {
       method: 'POST',
       body: JSON.stringify({ email, permission }),
     }),
     
   updateCollaboratorPermission: (noteId: number, userId: number, permission: 'read' | 'write' | 'admin') => 
-    fetchAPI(`/collaborators/notes/${noteId}/collaborators/${userId}`, {
+    fetchAPI<ApiResponse<{ success: boolean }>>(`/collaborators/notes/${noteId}/collaborators/${userId}`, {
       method: 'PUT',
       body: JSON.stringify({ permission }),
     }),
     
   removeCollaborator: (noteId: number, userId: number) => 
-    fetchAPI(`/collaborators/notes/${noteId}/collaborators/${userId}`, {
+    fetchAPI<ApiResponse<{ success: boolean }>>(`/collaborators/notes/${noteId}/collaborators/${userId}`, {
       method: 'DELETE',
     }),
 }; 

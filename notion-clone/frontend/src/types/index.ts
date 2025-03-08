@@ -32,11 +32,14 @@ export interface ApiResponse<T> {
   message?: string;
   error?: string;
   data?: T;
+  [key: string]: any; // 임시로 추가하여 타입 오류 해결
 }
 
 export interface AuthResponse {
-  message: string;
-  user: User;
+  message?: string;
+  user?: User;
+  token?: string;
+  error?: string;
 }
 
 export interface NotesResponse {
