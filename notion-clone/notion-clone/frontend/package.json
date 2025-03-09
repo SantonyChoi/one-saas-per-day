@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "lib0": "^0.2.99",
+    "y-websocket": "^2.1.0"
+  }
+}

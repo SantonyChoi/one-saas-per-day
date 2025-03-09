@@ -1,49 +1,14 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/stores';
-  import * as Y from 'yjs';
-  import { WebsocketProvider } from 'y-websocket';
   import BlockEditor from '../../../components/BlockEditor.svelte';
-  import { API_URL, SOCKET_URL, apiRequest } from '$lib/config';
+  import { API_URL, SOCKET_URL, apiRequest, getDefaultContent } from '$lib/config';
   
   let pageData = null;
   let blocks = [];
   let isLoading = true;
   let error = null;
   let title = '';
-  let ydoc;
-  let provider;
-  let blocksArray;
-  
-  // Initialize Yjs document and WebSocket connection
-  function initYjs() {
-    const pageId = $page.params.id;
-    
-    // Create a new Yjs document
-    ydoc = new Y.Doc();
-    
-    // Get the shared blocks array
-    blocksArray = ydoc.getArray('blocks');
-    
-    // Connect to the WebSocket server
-    provider = new WebsocketProvider(SOCKET_URL, `page-${pageId}`, ydoc);
-    
-    // Listen for connection status
-    provider.on('status', event => {
-      console.log('Connection status:', event.status);
-    });
-    
-    // Listen for changes to the blocks array
-    blocksArray.observe(event => {
-      // Update the local blocks array when the shared array changes
-      blocks = Array.from(blocksArray.toArray()).map(block => ({
-        id: block.get('id'),
-        type: block.get('type'),
-        content: JSON.parse(block.get('content')),
-        position: block.get('position')
-      }));
-    });
-  }
   
   // Fetch page data
   async function fetchPageData() {
@@ -57,9 +22,6 @@
       
       // Fetch blocks
       blocks = await apiRequest(`/pages/${pageId}/blocks`);
-      
-      // Initialize Yjs after fetching data
-      initYjs();
     } catch (err) {
       error = err.message;
       console.error('Error fetching page data:', err);
@@ -87,32 +49,11 @@
   function addBlock(type = 'paragraph', position = blocks.length) {
     const pageId = $page.params.id;
     
-    let content = {};
-    switch (type) {
-      case 'paragraph':
-        content = { text: '' };
-        break;
-      case 'heading-1':
-      case 'heading-2':
-      case 'heading-3':
-        content = { text: '' };
-        break;
-      case 'bullet-list':
-      case 'numbered-list':
-        content = { text: '' };
-        break;
-      case 'todo':
-        content = { text: '', checked: false };
-        break;
-      default:
-        content = { text: '' };
-    }
-    
     apiRequest(`/pages/${pageId}/blocks`, {
       method: 'POST',
       body: JSON.stringify({
         type,
-        content,
+        content: getDefaultContent(type),
         position
       })
     })
@@ -127,16 +68,6 @@
   
   onMount(() => {
     fetchPageData();
-  });
-  
-  onDestroy(() => {
-    // Clean up Yjs resources
-    if (provider) {
-      provider.disconnect();
-    }
-    if (ydoc) {
-      ydoc.destroy();
-    }
   });
 </script>
 
@@ -173,6 +104,10 @@
       {:else}
         <BlockEditor {blocks} {addBlock} pageId={$page.params.id} />
       {/if}
+    </div>
+    
+    <div class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-md">
+      <p>실시간 협업 기능은 현재 비활성화되어 있습니다. 기본 편집 기능만 사용할 수 있습니다.</p>
     </div>
   {/if}
   
