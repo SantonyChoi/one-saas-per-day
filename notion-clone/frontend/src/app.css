@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles */
+body {
+  @apply bg-white text-gray-900 min-h-screen;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Block editor styles */
+.block-container {
+  @apply max-w-4xl mx-auto px-4 py-2;
+}
+
+.block {
+  @apply my-1 p-1 rounded-sm outline-none transition-colors;
+}
+
+.block:focus {
+  @apply bg-gray-100;
+}
+
+.block-paragraph {
+  @apply text-base;
+}
+
+.block-heading-1 {
+  @apply text-3xl font-bold;
+}
+
+.block-heading-2 {
+  @apply text-2xl font-bold;
+}
+
+.block-heading-3 {
+  @apply text-xl font-bold;
+}
+
+.block-bullet-list {
+  @apply pl-6 list-disc;
+}
+
+.block-numbered-list {
+  @apply pl-6 list-decimal;
+}
+
+.block-todo {
+  @apply flex items-start gap-2;
+}
+
+.block-todo input[type="checkbox"] {
+  @apply mt-1;
+}
+
+/* Toolbar styles */
+.toolbar {
+  @apply flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-md shadow-sm;
+}
+
+.toolbar-button {
+  @apply p-1 rounded hover:bg-gray-100 transition-colors;
+} 
