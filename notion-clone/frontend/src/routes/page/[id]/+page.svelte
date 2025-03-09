@@ -4,6 +4,7 @@
   import * as Y from 'yjs';
   import { WebsocketProvider } from 'y-websocket';
   import BlockEditor from '../../../components/BlockEditor.svelte';
+  import { API_URL, SOCKET_URL, apiRequest } from '$lib/config';
   
   let pageData = null;
   let blocks = [];
@@ -17,7 +18,6 @@
   // Initialize Yjs document and WebSocket connection
   function initYjs() {
     const pageId = $page.params.id;
-    const socketUrl = import.meta.env.PUBLIC_SOCKET_URL || 'http://localhost:5001';
     
     // Create a new Yjs document
     ydoc = new Y.Doc();
@@ -26,7 +26,7 @@
     blocksArray = ydoc.getArray('blocks');
     
     // Connect to the WebSocket server
-    provider = new WebsocketProvider(socketUrl, `page-${pageId}`, ydoc);
+    provider = new WebsocketProvider(SOCKET_URL, `page-${pageId}`, ydoc);
     
     // Listen for connection status
     provider.on('status', event => {
@@ -52,19 +52,11 @@
     
     try {
       // Fetch page details
-      const pageResponse = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/pages/${pageId}`);
-      if (!pageResponse.ok) {
-        throw new Error('Failed to fetch page');
-      }
-      pageData = await pageResponse.json();
+      pageData = await apiRequest(`/pages/${pageId}`);
       title = pageData.title;
       
       // Fetch blocks
-      const blocksResponse = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/pages/${pageId}/blocks`);
-      if (!blocksResponse.ok) {
-        throw new Error('Failed to fetch blocks');
-      }
-      blocks = await blocksResponse.json();
+      blocks = await apiRequest(`/pages/${pageId}/blocks`);
       
       // Initialize Yjs after fetching data
       initYjs();
@@ -81,17 +73,10 @@
     const pageId = $page.params.id;
     
     try {
-      const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/pages/${pageId}`, {
+      await apiRequest(`/pages/${pageId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ title })
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update title');
-      }
     } catch (err) {
       error = err.message;
       console.error('Error updating title:', err);
@@ -100,7 +85,7 @@
   
   // Add a new block
   function addBlock(type = 'paragraph', position = blocks.length) {
-    const apiUrl = `${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/pages/${$page.params.id}/blocks`;
+    const pageId = $page.params.id;
     
     let content = {};
     switch (type) {
@@ -123,22 +108,13 @@
         content = { text: '' };
     }
     
-    fetch(apiUrl, {
+    apiRequest(`/pages/${pageId}/blocks`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
         type,
         content,
         position
       })
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to add block');
-      }
-      return response.json();
     })
     .then(newBlock => {
       blocks = [...blocks.slice(0, position), newBlock, ...blocks.slice(position)];

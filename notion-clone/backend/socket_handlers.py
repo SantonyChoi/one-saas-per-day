@@ -5,6 +5,8 @@ import json
 import logging
 import uuid
 from y_py import YDoc, YMap, YArray
+import threading
+import time
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -12,6 +14,12 @@ logger = logging.getLogger(__name__)
 
 # Store active documents (page_id -> YDoc)
 active_docs = {}
+# Store document locks to prevent race conditions
+doc_locks = {}
+# Store last persistence time for each document
+last_persist_time = {}
+# Persistence interval in seconds
+PERSIST_INTERVAL = 5
 
 # 필요한 함수 직접 구현
 def encode_state_vector(doc):
@@ -26,7 +34,49 @@ def encode_update_from_state_vector(doc, state_vector):
     """
     return doc.encode_state_as_update(state_vector)
 
+def get_or_create_doc_lock(page_id):
+    """
+    Get or create a lock for a document.
+    """
+    if page_id not in doc_locks:
+        doc_locks[page_id] = threading.Lock()
+    return doc_locks[page_id]
+
+def start_persistence_thread():
+    """
+    Start a background thread to periodically persist changes.
+    """
+    def persistence_worker():
+        while True:
+            try:
+                current_time = time.time()
+                pages_to_persist = []
+                
+                # Find documents that need to be persisted
+                for page_id, last_time in list(last_persist_time.items()):
+                    if current_time - last_time >= PERSIST_INTERVAL:
+                        pages_to_persist.append(page_id)
+                
+                # Persist changes for each document
+                for page_id in pages_to_persist:
+                    if page_id in active_docs:
+                        with get_or_create_doc_lock(page_id):
+                            persist_changes(page_id, active_docs[page_id])
+                            last_persist_time[page_id] = current_time
+                
+                # Sleep for a short time
+                time.sleep(1)
+            except Exception as e:
+                logger.error(f"Error in persistence worker: {str(e)}")
+    
+    thread = threading.Thread(target=persistence_worker, daemon=True)
+    thread.start()
+    logger.info("Started persistence background thread")
+
 def register_socket_handlers(socketio):
+    # Start the persistence thread
+    start_persistence_thread()
+    
     @socketio.on('connect')
     def handle_connect():
         logger.info(f"Client connected: {request.sid}")
@@ -51,28 +101,30 @@ def register_socket_handlers(socketio):
         logger.info(f"Client {request.sid} joined page {page_id}")
 
         # Initialize YDoc for this page if it doesn't exist
-        if page_id not in active_docs:
-            active_docs[page_id] = YDoc()
+        with get_or_create_doc_lock(page_id):
+            if page_id not in active_docs:
+                active_docs[page_id] = YDoc()
+                last_persist_time[page_id] = time.time()
+                
+                # Initialize the blocks array in the YDoc
+                blocks_array = active_docs[page_id].get_array('blocks')
+                
+                # Load blocks from database
+                db = get_db()
+                blocks = db.query(Block).filter(Block.page_id == page_id).order_by(Block.position).all()
+                
+                # Add blocks to YDoc
+                for block in blocks:
+                    block_map = YMap()
+                    block_map.set('id', str(block.id))
+                    block_map.set('type', block.type)
+                    block_map.set('content', json.dumps(block.content))
+                    block_map.set('position', block.position)
+                    blocks_array.append(block_map)
             
-            # Initialize the blocks array in the YDoc
-            blocks_array = active_docs[page_id].get_array('blocks')
-            
-            # Load blocks from database
-            db = get_db()
-            blocks = db.query(Block).filter(Block.page_id == page_id).order_by(Block.position).all()
-            
-            # Add blocks to YDoc
-            for block in blocks:
-                block_map = YMap()
-                block_map.set('id', str(block.id))
-                block_map.set('type', block.type)
-                block_map.set('content', json.dumps(block.content))
-                block_map.set('position', block.position)
-                blocks_array.append(block_map)
-        
-        # Get the current state of the document
-        doc = active_docs[page_id]
-        state_vector = encode_state_vector(doc)
+            # Get the current state of the document
+            doc = active_docs[page_id]
+            state_vector = encode_state_vector(doc)
         
         # Send the state vector to the client
         emit('sync_step1', {'state_vector': state_vector.tobytes().hex()})
@@ -83,20 +135,27 @@ def register_socket_handlers(socketio):
         Handle the second step of the sync protocol
         """
         page_id = data.get('page_id')
-        client_state_vector = bytes.fromhex(data.get('state_vector', ''))
+        client_state_vector_hex = data.get('state_vector', '')
         
         if not page_id or page_id not in active_docs:
             emit('error', {'message': 'Invalid page ID'})
             return
         
-        # Get the document
-        doc = active_docs[page_id]
-        
-        # Encode the state as an update based on the client's state vector
-        update = encode_update_from_state_vector(doc, client_state_vector)
-        
-        # Send the update to the client
-        emit('sync_update', {'update': update.tobytes().hex()})
+        try:
+            client_state_vector = bytes.fromhex(client_state_vector_hex)
+            
+            # Get the document
+            with get_or_create_doc_lock(page_id):
+                doc = active_docs[page_id]
+                
+                # Encode the state as an update based on the client's state vector
+                update = encode_update_from_state_vector(doc, client_state_vector)
+            
+            # Send the update to the client
+            emit('sync_update', {'update': update.tobytes().hex()})
+        except Exception as e:
+            logger.error(f"Error in sync_step2: {str(e)}")
+            emit('error', {'message': f'Sync error: {str(e)}'})
 
     @socketio.on('update')
     def handle_update(data):
@@ -104,23 +163,26 @@ def register_socket_handlers(socketio):
         Handle updates from clients
         """
         page_id = data.get('page_id')
-        update_bytes = bytes.fromhex(data.get('update', ''))
+        update_hex = data.get('update', '')
         
         if not page_id or page_id not in active_docs:
             emit('error', {'message': 'Invalid page ID'})
             return
         
-        # Get the document
-        doc = active_docs[page_id]
-        
-        # Apply the update to the document
-        doc.apply_update(update_bytes)
-        
-        # Broadcast the update to all clients in the room except the sender
-        emit('update', {'update': update_bytes.hex()}, room=page_id, skip_sid=request.sid)
-        
-        # Persist changes to database (debounced/throttled in a real implementation)
-        persist_changes(page_id, doc)
+        try:
+            update_bytes = bytes.fromhex(update_hex)
+            
+            # Get the document and apply the update
+            with get_or_create_doc_lock(page_id):
+                doc = active_docs[page_id]
+                doc.apply_update(update_bytes)
+                last_persist_time[page_id] = time.time()
+            
+            # Broadcast the update to all clients in the room except the sender
+            emit('update', {'update': update_hex}, room=page_id, skip_sid=request.sid)
+        except Exception as e:
+            logger.error(f"Error applying update: {str(e)}")
+            emit('error', {'message': f'Update error: {str(e)}'})
 
     @socketio.on('leave_page')
     def handle_leave_page(data):
@@ -137,9 +199,14 @@ def register_socket_handlers(socketio):
         # Check if the room is empty and clean up if needed
         if len(socketio.server.rooms.get(page_id, {})) == 0 and page_id in active_docs:
             # Persist any final changes
-            persist_changes(page_id, active_docs[page_id])
-            # Remove the document from memory
-            del active_docs[page_id]
+            with get_or_create_doc_lock(page_id):
+                persist_changes(page_id, active_docs[page_id])
+                # Remove the document from memory
+                del active_docs[page_id]
+                if page_id in last_persist_time:
+                    del last_persist_time[page_id]
+                if page_id in doc_locks:
+                    del doc_locks[page_id]
             logger.info(f"Cleaned up document for page {page_id}")
 
 def persist_changes(page_id, doc):

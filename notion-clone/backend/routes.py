@@ -1,14 +1,8 @@
 from flask import jsonify, request
 import uuid
-from models import get_db, Page, Block, init_db
+from models import get_db, Page, Block
 
 def register_routes(app):
-    # Initialize database
-    # Flask 2.0+ 에서는 before_first_request가 제거됨
-    # 대신 app.app_context()를 사용하여 초기화
-    with app.app_context():
-        init_db()
-
     # Pages API endpoints
     @app.route('/api/pages', methods=['GET'])
     def get_pages():

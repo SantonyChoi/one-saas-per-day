@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import Block from './Block.svelte';
+  import { apiRequest } from '$lib/config';
   
   export let blocks = [];
   export let pageId;
@@ -11,19 +12,10 @@
   // Update a block
   async function updateBlock(blockId, data) {
     try {
-      const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/blocks/${blockId}`, {
+      return await apiRequest(`/blocks/${blockId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(data)
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update block');
-      }
-      
-      return await response.json();
     } catch (err) {
       console.error('Error updating block:', err);
       throw err;
@@ -33,13 +25,9 @@
   // Delete a block
   async function deleteBlock(blockId) {
     try {
-      const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/blocks/${blockId}`, {
+      await apiRequest(`/blocks/${blockId}`, {
         method: 'DELETE'
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete block');
-      }
       
       // Update local blocks array
       blocks = blocks.filter(block => block.id !== blockId);

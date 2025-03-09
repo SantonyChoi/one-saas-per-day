@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { API_URL, apiRequest, BLOCK_TYPES } from '$lib/config';
   
   let pages = [];
   let newPageTitle = '';
@@ -10,11 +11,7 @@
   async function fetchPages() {
     isLoading = true;
     try {
-      const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/pages`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch pages');
-      }
-      pages = await response.json();
+      pages = await apiRequest('/pages');
     } catch (err) {
       error = err.message;
       console.error('Error fetching pages:', err);
@@ -28,19 +25,11 @@
     if (!newPageTitle.trim()) return;
     
     try {
-      const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/pages`, {
+      const newPage = await apiRequest('/pages', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ title: newPageTitle })
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to create page');
-      }
-      
-      const newPage = await response.json();
       pages = [...pages, newPage];
       newPageTitle = '';
     } catch (err) {
@@ -54,13 +43,9 @@
     if (!confirm('Are you sure you want to delete this page?')) return;
     
     try {
-      const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:5001/api'}/pages/${id}`, {
+      await apiRequest(`/pages/${id}`, {
         method: 'DELETE'
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete page');
-      }
       
       pages = pages.filter(page => page.id !== id);
     } catch (err) {
