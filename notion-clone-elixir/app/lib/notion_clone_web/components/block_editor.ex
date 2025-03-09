@@ -32,10 +32,22 @@ defmodule NotionCloneWeb.Components.BlockEditor do
 
   @impl true
   def update(%{document: document} = assigns, socket) do
+    # 중복 ID를 가진 블록 제거
+    unique_blocks = document.blocks
+                    |> Enum.reduce([], fn block, acc ->
+                      if Enum.any?(acc, fn b -> b.id == block.id end) do
+                        acc
+                      else
+                        [block | acc]
+                      end
+                    end)
+                    |> Enum.reverse()
+                    |> Enum.sort_by(& &1.order)
+
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:blocks, document.blocks)
+     |> assign(:blocks, unique_blocks)
      |> handle_presence_update()}
   end
 
@@ -52,7 +64,7 @@ defmodule NotionCloneWeb.Components.BlockEditor do
         <% end %>
       </div>
 
-      <div class="space-y-4" id="block-editor" phx-hook="BlockEditor">
+      <div class="space-y-4" id="block-editor" phx-hook="BlockEditor" phx-target={@myself}>
         <%= for block <- @blocks do %>
           <div
             class={[
@@ -61,6 +73,7 @@ defmodule NotionCloneWeb.Components.BlockEditor do
             ]}
             id={"block-#{block.id}"}
             phx-click={JS.push("select_block", value: %{id: block.id})}
+            phx-target={@myself}
           >
             <%= if @editing_block == block.id do %>
               <form phx-submit="save_block" phx-target={@myself}>
@@ -111,52 +124,114 @@ defmodule NotionCloneWeb.Components.BlockEditor do
   def handle_event("add_block", _params, socket) do
     order = Documents.get_next_block_order(socket.assigns.document.id)
 
-    {:ok, block} =
-      Documents.create_block(%{
-        content: "",
-        type: "text",
-        order: order,
-        document_id: socket.assigns.document.id
-      })
+    case Documents.create_block(%{
+      content: "",
+      type: "text",
+      order: order,
+      document_id: socket.assigns.document.id
+    }) do
+      {:ok, block} ->
+        # 이미 존재하는 블록인지 확인
+        if Enum.any?(socket.assigns.blocks, fn b -> b.id == block.id end) do
+          {:noreply, socket}
+        else
+          broadcast_block_update(block, :add)
 
-    broadcast_block_update(block, :add)
+          {:noreply,
+           socket
+           |> update(:blocks, &(&1 ++ [block]))
+           |> assign(editing_block: block.id)}
+        end
 
-    {:noreply,
-     socket
-     |> update(:blocks, &(&1 ++ [block]))
-     |> assign(editing_block: block.id)}
+      {:error, _changeset} ->
+        # 블록 생성 실패 시 에러 처리
+        {:noreply, socket}
+    end
   end
 
   def handle_event("select_block", %{"id" => id}, socket) do
-    {:noreply, assign(socket, selected_block: id)}
+    # ID를 정수로 변환 (문자열인 경우에만)
+    block_id = if is_binary(id) do
+      case Integer.parse(id) do
+        {int_id, _} -> int_id
+        :error -> id
+      end
+    else
+      id  # 이미 정수인 경우 그대로 사용
+    end
+
+    # 블록이 실제로 존재하는지 확인
+    block_exists = Enum.any?(socket.assigns.blocks, fn block ->
+      block.id == block_id
+    end)
+
+    if block_exists do
+      {:noreply, assign(socket, selected_block: block_id)}
+    else
+      # 존재하지 않는 블록 ID인 경우 무시
+      {:noreply, socket}
+    end
   end
 
   def handle_event("save_block", %{"content" => content}, socket) do
-    block = Enum.find(socket.assigns.blocks, &(&1.id == socket.assigns.editing_block))
-    {:ok, updated_block} = Documents.update_block(block, %{content: content})
+    block_id = socket.assigns.editing_block
+    block = Enum.find(socket.assigns.blocks, &(&1.id == block_id))
 
-    broadcast_block_update(updated_block, :update)
+    if block do
+      case Documents.update_block(block, %{content: content}) do
+        {:ok, updated_block} ->
+          broadcast_block_update(updated_block, :update)
 
-    updated_blocks =
-      Enum.map(socket.assigns.blocks, fn b ->
-        if b.id == updated_block.id, do: updated_block, else: b
-      end)
+          updated_blocks =
+            Enum.map(socket.assigns.blocks, fn b ->
+              if b.id == updated_block.id, do: updated_block, else: b
+            end)
 
-    {:noreply,
-     socket
-     |> assign(blocks: updated_blocks, editing_block: nil)
-     |> push_event("block_updated", %{id: socket.assigns.editing_block})}
+          {:noreply,
+           socket
+           |> assign(blocks: updated_blocks, editing_block: nil)
+           |> push_event("block_updated", %{id: block_id})}
+
+        {:error, _changeset} ->
+          # 블록 업데이트 실패 시 에러 처리
+          {:noreply, assign(socket, editing_block: nil)}
+      end
+    else
+      # 편집 중인 블록을 찾을 수 없는 경우
+      {:noreply, assign(socket, editing_block: nil)}
+    end
   end
 
   def handle_event("delete_block", %{"id" => id}, socket) do
-    block = Enum.find(socket.assigns.blocks, &(&1.id == id))
-    {:ok, _} = Documents.delete_block(block)
+    # ID를 정수로 변환 (문자열인 경우에만)
+    block_id = if is_binary(id) do
+      case Integer.parse(id) do
+        {int_id, _} -> int_id
+        :error -> id
+      end
+    else
+      id  # 이미 정수인 경우 그대로 사용
+    end
 
-    broadcast_block_update(%{id: id}, :delete)
+    block = Enum.find(socket.assigns.blocks, &(&1.id == block_id))
 
-    {:noreply,
-     socket
-     |> update(:blocks, &Enum.reject(&1, fn b -> b.id == id end))}
+    if block do
+      case Documents.delete_block(block) do
+        {:ok, _} ->
+          broadcast_block_update(%{id: block_id}, :delete)
+
+          {:noreply,
+           socket
+           |> update(:blocks, &Enum.reject(&1, fn b -> b.id == block_id end))}
+
+        {:error, _reason} ->
+          # 블록 삭제 실패 시 에러 처리
+          {:noreply, socket}
+      end
+    else
+      # 존재하지 않는 블록 ID인 경우 무시
+      {:noreply, socket}
+    end
   end
 
   def handle_event("stop_editing", _params, socket) do
@@ -168,17 +243,32 @@ defmodule NotionCloneWeb.Components.BlockEditor do
     {:noreply,
      case action do
        :add ->
-         update(socket, :blocks, &(&1 ++ [block]))
+         # 이미 존재하는 블록인지 확인
+         if Enum.any?(socket.assigns.blocks, fn b -> b.id == block.id end) do
+           socket
+         else
+           update(socket, :blocks, &(&1 ++ [block]))
+         end
 
        :update ->
-         update(socket, :blocks, fn blocks ->
-           Enum.map(blocks, fn b ->
-             if b.id == block.id, do: block, else: b
+         # 업데이트할 블록이 존재하는지 확인
+         if Enum.any?(socket.assigns.blocks, fn b -> b.id == block.id end) do
+           update(socket, :blocks, fn blocks ->
+             Enum.map(blocks, fn b ->
+               if b.id == block.id, do: block, else: b
+             end)
            end)
-         end)
+         else
+           socket
+         end
 
        :delete ->
-         update(socket, :blocks, &Enum.reject(&1, fn b -> b.id == block.id end))
+         # 삭제할 블록이 존재하는지 확인
+         if Enum.any?(socket.assigns.blocks, fn b -> b.id == block.id end) do
+           update(socket, :blocks, &Enum.reject(&1, fn b -> b.id == block.id end))
+         else
+           socket
+         end
      end}
   end
 
@@ -191,8 +281,10 @@ defmodule NotionCloneWeb.Components.BlockEditor do
   end
 
   defp broadcast_block_update(block, action) do
-    Phoenix.PubSub.broadcast(
+    # 현재 프로세스에는 메시지를 보내지 않도록 설정
+    Phoenix.PubSub.broadcast_from(
       NotionClone.PubSub,
+      self(),
       @topic,
       {:block_updated, block, action}
     )
