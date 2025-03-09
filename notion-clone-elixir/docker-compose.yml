@@ -1,0 +1,44 @@
+services:
+  web:
+    build:
+      context: .
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./app:/app
+      - deps:/app/deps
+      - build:/app/_build
+      - static:/app/priv/static
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/notion_clone_dev
+      - POSTGRES_HOST=db
+      - SECRET_KEY_BASE=Ht9QDxRKbRd7aT3RnvzRFXoxQ2KAjqBgbUZgCx3F4biIKuHN6vgV3PhPXYDLe5Qh
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        mix deps.get --force &&
+        mix ecto.setup &&
+        mix phx.server
+      "
+
+  db:
+    image: postgres:14-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=notion_clone_dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  deps:
+  build:
+  static:
