@@ -92,11 +92,17 @@ const NoteDetailPage: React.FC = () => {
               // Get all notes the user is collaborating on
               const sharedNotesResponse = await collaboratorsAPI.getCollaborativeNotes();
               
+              console.log('Shared notes response:', sharedNotesResponse);
+              
               if (!sharedNotesResponse.error && sharedNotesResponse.notes) {
+                console.log('Looking for note with ID:', noteId, 'in shared notes:', sharedNotesResponse.notes);
+                
                 // Find the current note in the shared notes
                 const sharedNote = sharedNotesResponse.notes.find(
-                  (n: any) => n.id === noteId
+                  (n: any) => Number(n.note.id) === noteId
                 );
+                
+                console.log('Found shared note:', sharedNote);
                 
                 if (sharedNote && sharedNote.permission) {
                   userHasAccess = true;
