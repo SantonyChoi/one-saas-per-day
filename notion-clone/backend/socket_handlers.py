@@ -91,6 +91,14 @@ def register_socket_handlers(socketio):
         """
         Handle a client joining a page for collaborative editing
         """
+        # 데이터가 문자열인 경우 JSON으로 파싱
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError:
+                emit('error', {'message': 'Invalid JSON data'})
+                return
+        
         page_id = data.get('page_id')
         if not page_id:
             emit('error', {'message': 'Page ID is required'})
@@ -129,30 +137,187 @@ def register_socket_handlers(socketio):
         # Send the state vector to the client
         emit('sync_step1', {'state_vector': state_vector.tobytes().hex()})
 
+    @socketio.on('update_block')
+    def handle_update_block(data):
+        """
+        Handle block update events from clients
+        """
+        try:
+            # 데이터가 문자열인 경우 JSON으로 파싱
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    emit('error', {'message': 'Invalid JSON data'})
+                    return
+            
+            page_id = data.get('pageId')
+            block = data.get('block')
+            
+            if not page_id or not block:
+                emit('error', {'message': 'Invalid data for block update'})
+                return
+            
+            logger.info(f"Block update received for page {page_id}, block {block.get('id')}")
+            
+            # Update the block in the database
+            db = get_db()
+            db_block = db.query(Block).filter(Block.id == block.get('id')).first()
+            
+            if db_block:
+                # Update the block
+                if 'type' in block:
+                    db_block.type = block['type']
+                if 'content' in block:
+                    db_block.content = block['content']
+                if 'position' in block:
+                    db_block.position = block['position']
+                
+                db.commit()
+                
+                # Broadcast the update to all clients in the room except the sender
+                emit('block_updated', block, room=page_id, skip_sid=request.sid)
+                logger.info(f"Block update broadcasted to room {page_id}")
+            else:
+                emit('error', {'message': f"Block {block.get('id')} not found"})
+        except Exception as e:
+            logger.error(f"Error in update_block: {str(e)}")
+            emit('error', {'message': f'Update error: {str(e)}'})
+
+    @socketio.on('add_block')
+    def handle_add_block(data):
+        """
+        Handle block creation events from clients
+        """
+        try:
+            # 데이터가 문자열인 경우 JSON으로 파싱
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    emit('error', {'message': 'Invalid JSON data'})
+                    return
+            
+            page_id = data.get('pageId')
+            block = data.get('block')
+            
+            if not page_id or not block:
+                emit('error', {'message': 'Invalid data for block creation'})
+                return
+            
+            logger.info(f"Block creation received for page {page_id}")
+            
+            # Broadcast the new block to all clients in the room except the sender
+            emit('block_added', block, room=page_id, skip_sid=request.sid)
+            logger.info(f"Block creation broadcasted to room {page_id}")
+        except Exception as e:
+            logger.error(f"Error in add_block: {str(e)}")
+            emit('error', {'message': f'Add block error: {str(e)}'})
+
+    @socketio.on('delete_block')
+    def handle_delete_block(data):
+        """
+        Handle block deletion events from clients
+        """
+        try:
+            # 데이터가 문자열인 경우 JSON으로 파싱
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    emit('error', {'message': 'Invalid JSON data'})
+                    return
+            
+            page_id = data.get('pageId')
+            block_id = data.get('blockId')
+            
+            if not page_id or not block_id:
+                emit('error', {'message': 'Invalid data for block deletion'})
+                return
+            
+            logger.info(f"Block deletion received for page {page_id}, block {block_id}")
+            
+            # Broadcast the deletion to all clients in the room except the sender
+            emit('block_deleted', block_id, room=page_id, skip_sid=request.sid)
+            logger.info(f"Block deletion broadcasted to room {page_id}")
+        except Exception as e:
+            logger.error(f"Error in delete_block: {str(e)}")
+            emit('error', {'message': f'Delete block error: {str(e)}'})
+
+    @socketio.on('update_title')
+    def handle_update_title(data):
+        """
+        Handle title update events from clients
+        """
+        try:
+            # 데이터가 문자열인 경우 JSON으로 파싱
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    emit('error', {'message': 'Invalid JSON data'})
+                    return
+            
+            page_id = data.get('pageId')
+            title = data.get('title')
+            
+            if not page_id or title is None:
+                emit('error', {'message': 'Invalid data for title update'})
+                return
+            
+            logger.info(f"Title update received for page {page_id}: {title}")
+            
+            # Update the title in the database
+            db = get_db()
+            page = db.query(Page).filter(Page.id == page_id).first()
+            
+            if page:
+                page.title = title
+                db.commit()
+                
+                # Broadcast the title update to all clients in the room except the sender
+                emit('title_updated', title, room=page_id, skip_sid=request.sid)
+                logger.info(f"Title update broadcasted to room {page_id}")
+            else:
+                emit('error', {'message': f"Page {page_id} not found"})
+        except Exception as e:
+            logger.error(f"Error in update_title: {str(e)}")
+            emit('error', {'message': f'Title update error: {str(e)}'})
+
     @socketio.on('sync_step2')
     def handle_sync_step2(data):
         """
         Handle the second step of the sync protocol
         """
-        page_id = data.get('page_id')
-        client_state_vector_hex = data.get('state_vector', '')
-        
-        if not page_id or page_id not in active_docs:
-            emit('error', {'message': 'Invalid page ID'})
-            return
-        
         try:
-            client_state_vector = bytes.fromhex(client_state_vector_hex)
+            # 데이터가 문자열인 경우 JSON으로 파싱
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    emit('error', {'message': 'Invalid JSON data'})
+                    return
             
-            # Get the document
+            page_id = data.get('page_id')
+            client_sv = data.get('state_vector')
+            
+            if not page_id or not client_sv:
+                emit('error', {'message': 'Invalid data for sync'})
+                return
+            
+            # Convert hex string to bytes
+            client_sv_bytes = bytes.fromhex(client_sv)
+            
             with get_or_create_doc_lock(page_id):
-                doc = active_docs[page_id]
+                if page_id not in active_docs:
+                    emit('error', {'message': 'Document not found'})
+                    return
                 
-                # Encode the state as an update based on the client's state vector
-                update = encode_update_from_state_vector(doc, client_state_vector)
+                doc = active_docs[page_id]
+                update = encode_update_from_state_vector(doc, client_sv_bytes)
             
             # Send the update to the client
-            emit('sync_update', {'update': update.tobytes().hex()})
+            emit('sync_step2', {'update': update.tobytes().hex()})
         except Exception as e:
             logger.error(f"Error in sync_step2: {str(e)}")
             emit('error', {'message': f'Sync error: {str(e)}'})
@@ -160,28 +325,42 @@ def register_socket_handlers(socketio):
     @socketio.on('update')
     def handle_update(data):
         """
-        Handle updates from clients
+        Handle document updates from clients
         """
-        page_id = data.get('page_id')
-        update_hex = data.get('update', '')
-        
-        if not page_id or page_id not in active_docs:
-            emit('error', {'message': 'Invalid page ID'})
-            return
-        
         try:
+            # 데이터가 문자열인 경우 JSON으로 파싱
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    emit('error', {'message': 'Invalid JSON data'})
+                    return
+            
+            page_id = data.get('page_id')
+            update_hex = data.get('update')
+            
+            if not page_id or not update_hex:
+                emit('error', {'message': 'Invalid data for update'})
+                return
+            
+            # Convert hex string to bytes
             update_bytes = bytes.fromhex(update_hex)
             
-            # Get the document and apply the update
             with get_or_create_doc_lock(page_id):
+                if page_id not in active_docs:
+                    emit('error', {'message': 'Document not found'})
+                    return
+                
                 doc = active_docs[page_id]
                 doc.apply_update(update_bytes)
+                
+                # Update the last persistence time
                 last_persist_time[page_id] = time.time()
             
             # Broadcast the update to all clients in the room except the sender
             emit('update', {'update': update_hex}, room=page_id, skip_sid=request.sid)
         except Exception as e:
-            logger.error(f"Error applying update: {str(e)}")
+            logger.error(f"Error in update: {str(e)}")
             emit('error', {'message': f'Update error: {str(e)}'})
 
     @socketio.on('leave_page')
@@ -189,25 +368,32 @@ def register_socket_handlers(socketio):
         """
         Handle a client leaving a page
         """
-        page_id = data.get('page_id')
-        if not page_id:
-            return
-        
-        leave_room(page_id)
-        logger.info(f"Client {request.sid} left page {page_id}")
-        
-        # Check if the room is empty and clean up if needed
-        if len(socketio.server.rooms.get(page_id, {})) == 0 and page_id in active_docs:
-            # Persist any final changes
-            with get_or_create_doc_lock(page_id):
-                persist_changes(page_id, active_docs[page_id])
-                # Remove the document from memory
-                del active_docs[page_id]
-                if page_id in last_persist_time:
-                    del last_persist_time[page_id]
-                if page_id in doc_locks:
-                    del doc_locks[page_id]
-            logger.info(f"Cleaned up document for page {page_id}")
+        try:
+            # 데이터가 문자열인 경우 JSON으로 파싱
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    emit('error', {'message': 'Invalid JSON data'})
+                    return
+            
+            page_id = data.get('page_id')
+            
+            if not page_id:
+                emit('error', {'message': 'Page ID is required'})
+                return
+            
+            # Leave the room for this page
+            leave_room(page_id)
+            logger.info(f"Client {request.sid} left page {page_id}")
+            
+            # Check if this was the last client in the room
+            # If so, we can clean up resources
+            # This would require tracking active clients per room
+            # For now, we'll just keep the document in memory
+        except Exception as e:
+            logger.error(f"Error in leave_page: {str(e)}")
+            emit('error', {'message': f'Leave page error: {str(e)}'})
 
 def persist_changes(page_id, doc):
     """

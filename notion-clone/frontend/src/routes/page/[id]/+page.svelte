@@ -34,7 +34,7 @@
         socket = io(SOCKET_URL);
         
         // 페이지 룸에 참여
-        socket.emit('join_page', pageId);
+        socket.emit('join_page', { page_id: pageId });
         
         // 연결 상태 모니터링
         socket.on('connect', () => {
