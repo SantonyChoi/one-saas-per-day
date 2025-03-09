@@ -1,43 +1,14 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import Block from './Block.svelte';
-  import { apiRequest } from '$lib/config';
   
   export let blocks = [];
   export let pageId;
   export let addBlock;
+  export let updateBlock;
+  export let deleteBlock;
   
   const dispatch = createEventDispatcher();
-  
-  // Update a block
-  async function updateBlock(blockId, data) {
-    try {
-      return await apiRequest(`/blocks/${blockId}`, {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
-    } catch (err) {
-      console.error('Error updating block:', err);
-      throw err;
-    }
-  }
-  
-  // Delete a block
-  async function deleteBlock(blockId) {
-    try {
-      await apiRequest(`/blocks/${blockId}`, {
-        method: 'DELETE'
-      });
-      
-      // Update local blocks array
-      blocks = blocks.filter(block => block.id !== blockId);
-      
-      return true;
-    } catch (err) {
-      console.error('Error deleting block:', err);
-      throw err;
-    }
-  }
   
   // Handle keyboard events for navigation and block manipulation
   function handleKeydown(event, block, index) {
@@ -81,11 +52,7 @@
   // Handle content change
   function handleContentChange(event) {
     const { blockId, content } = event.detail;
-    const block = blocks.find(b => b.id === blockId);
-    
-    if (block) {
-      updateBlock(blockId, { content });
-    }
+    updateBlock(blockId, content);
   }
   
   // Handle block type change
@@ -94,7 +61,7 @@
     const block = blocks.find(b => b.id === blockId);
     
     if (block) {
-      updateBlock(blockId, { type });
+      updateBlock(blockId, { ...block.content, type });
     }
   }
 </script>
