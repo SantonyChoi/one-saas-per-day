@@ -139,13 +139,31 @@ func _on_session_resumed() -> void:
 # Start button handler
 func _on_start_button_pressed() -> void:
 	var duration_minutes = duration_options[current_duration_index]
+	
+	# First play the bell sound and wait a short time for it to start
+	sound_manager.play_bell()
+	
+	# Small delay to let the bell sound start properly
+	await get_tree().create_timer(0.1).timeout
+	
+	# Then start the session
 	meditation_session.start_session(duration_minutes)
-	sound_manager.play_bell()  # Play bell on session start
 
 # Stop button handler
 func _on_stop_button_pressed() -> void:
+	# First end the session
 	meditation_session.end_session()
-	sound_manager.play_bell()  # Play bell on session end
+	
+	# Small delay before playing bell
+	await get_tree().create_timer(0.1).timeout
+	
+	# Then play the bell
+	sound_manager.play_bell()
+	
+	# Restore ambient sound if needed after a short delay
+	await get_tree().create_timer(0.3).timeout
+	if current_sound_name != "none":
+		sound_manager.set_sound(current_sound_name)
 
 # Sound button handler
 func _on_sound_button_pressed(index: int) -> void:

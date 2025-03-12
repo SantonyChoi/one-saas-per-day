@@ -1,4 +1,4 @@
-class_name MeditationUIController
+class_name MainUIController
 extends Control
 
 # Core components

@@ -94,14 +94,25 @@ func _ensure_bell_playback() -> void:
 
 # Set the type of sound to generate
 func set_sound_type(type: String) -> void:
+	var previous_type = current_sound_type
+	
 	match type:
 		"rain": current_sound_type = SoundType.RAIN
 		"ocean": current_sound_type = SoundType.OCEAN
 		"birds": current_sound_type = SoundType.BIRDS
 		"none": 
-			# Just clear buffer when setting to none
+			current_sound_type = SoundType.RAIN  # Default to rain but with zero amplitude
 			_clear_ambient_buffer()
+			return  # Early return for none
 		_: current_sound_type = SoundType.RAIN
+	
+	# If changing sound types, reset phase variables for smooth transition
+	if previous_type != current_sound_type:
+		ambient_phase = 0.0
+		if current_sound_type == SoundType.BIRDS:
+			bird_chirp_timer = 0.5  # Start first chirp soon
+		elif current_sound_type == SoundType.OCEAN:
+			wave_phase = 0.0  # Reset wave phase
 
 # Fill the ambient sound buffer
 func _fill_ambient_buffer() -> void:
@@ -167,16 +178,32 @@ func _clear_bell_buffer() -> void:
 
 # Reset ambient generator state
 func reset_ambient_generator() -> void:
+	# Stop any in-progress generation
+	if ambient_playback:
+		# First clear buffer to prevent glitches
+		_clear_ambient_buffer()
+		if ambient_player and ambient_player.playing and not ambient_player.stream_paused:
+			# Push silence to the buffer before nullifying the playback
+			ambient_playback.push_buffer(ambient_buffer.slice(0, buffer_size/4))
+	
+	# Reset state
 	ambient_playback = null
 	ambient_phase = 0.0
 	wave_phase = 0.0
 	bird_chirp_timer = 0.0
-	_clear_ambient_buffer()
 
 # Reset bell generator state
 func reset_bell_generator() -> void:
+	# Stop any in-progress generation
+	if bell_playback:
+		# First clear buffer to prevent glitches
+		_clear_bell_buffer()
+		if bell_player and bell_player.playing and not bell_player.stream_paused:
+			# Push silence to the buffer before nullifying the playback
+			bell_playback.push_buffer(bell_buffer.slice(0, buffer_size/4))
+	
+	# Reset state
 	bell_playback = null
-	_clear_bell_buffer()
 
 # Improved rain sound generator with better filtering
 func _generate_rain(frames: int) -> void:
@@ -280,28 +307,33 @@ func _add_bird_chirp(frames: int, offset: float) -> void:
 # Bell sound with improved harmonics
 func _generate_bell(frames: int) -> void:
 	# Bell parameters
-	var base_freq = 440.0  # Base frequency (A4)
-	var decay = 2.0        # Decay rate
+	var base_freq = 320.0  # Lower frequency (E4) for a more pleasant bell
+	var decay = 5.0        # Faster decay rate to prevent lingering
 	
 	for i in range(frames):
 		var t = float(i) / 44100.0
 		
+		# Use exponential envelope with delay to avoid clicking
+		var envelope = exp(-t * decay) * bell_amplitude
+		if t < 0.002:  # Gentle attack to prevent clicks
+			envelope *= t / 0.002
+		
 		# Main tone with decay
-		var main_tone = sin(t * base_freq * TAU) * exp(-t * decay) * bell_amplitude
+		var main_tone = sin(t * base_freq * TAU) * envelope
 		
-		# Add harmonics for a richer bell sound
-		var harmonic1 = sin(t * base_freq * 2.0 * TAU) * exp(-t * decay * 1.5) * bell_amplitude * 0.5
-		var harmonic2 = sin(t * base_freq * 3.0 * TAU) * exp(-t * decay * 2.0) * bell_amplitude * 0.25
-		var harmonic3 = sin(t * base_freq * 4.2 * TAU) * exp(-t * decay * 2.5) * bell_amplitude * 0.125
+		# More harmonious partials for a softer bell sound
+		var harmonic1 = sin(t * base_freq * 2.0 * TAU) * exp(-t * decay * 1.8) * bell_amplitude * 0.4
+		var harmonic2 = sin(t * base_freq * 3.0 * TAU) * exp(-t * decay * 2.2) * bell_amplitude * 0.2
+		var harmonic3 = sin(t * base_freq * 5.0 * TAU) * exp(-t * decay * 2.5) * bell_amplitude * 0.1
 		
-		# Slight detuning for more natural sound
-		var detuned = sin(t * base_freq * 1.003 * TAU) * exp(-t * decay * 1.1) * bell_amplitude * 0.3
+		# Remove the detuned sound which can cause harshness
+		# var detuned = sin(t * base_freq * 1.003 * TAU) * exp(-t * decay * 1.1) * bell_amplitude * 0.3
 		
 		# Combine all partials
-		var value = main_tone + harmonic1 + harmonic2 + harmonic3 + detuned
+		var value = main_tone + harmonic1 + harmonic2 + harmonic3
 		
 		# Apply a slight stereo widening
-		var stereo_width = 0.1
+		var stereo_width = 0.05  # Reduce stereo width for more focused sound
 		bell_buffer[i] = Vector2(
 			value * (1.0 - stereo_width), 
 			value * (1.0 + stereo_width)

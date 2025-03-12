@@ -56,13 +56,23 @@ func initialize_audio_streams() -> void:
 	# Create and configure bell stream
 	var bell_stream = AudioStreamGenerator.new()
 	bell_stream.mix_rate = sample_rate
-	bell_stream.buffer_length = buffer_length_seconds * 0.5  # Shorter buffer for bell
+	bell_stream.buffer_length = buffer_length_seconds * 0.25  # Shorter buffer for bell for less latency
 	bell_player.stream = bell_stream
+	
+	# Set reasonable default volumes
+	ambient_player.volume_db = -3.0
+	bell_player.volume_db = -6.0
 	
 	_streams_initialized = true
 
 # Set the ambient sound type
 func set_sound(sound_name: String) -> void:
+	# If setting same sound, just make sure it's playing
+	if sound_name == current_sound_name and sound_name != "none":
+		if not ambient_player.playing:
+			ambient_player.play()
+		return
+	
 	# Stop current sound if playing and it's different
 	if ambient_player.playing and sound_name != current_sound_name:
 		stop_ambient()
@@ -97,24 +107,43 @@ func set_sound(sound_name: String) -> void:
 
 # Play the bell sound
 func play_bell() -> void:
-	# Stop any existing bell sound
+	# First ensure any lingering bell sounds are completely stopped
 	if bell_player.playing:
 		bell_player.stop()
 		sound_generator.reset_bell_generator()
+		# Wait for audio system to catch up
 		await get_tree().process_frame
+		await get_tree().process_frame  # Wait two frames to be extra safe
 	
 	# Ensure the stream is properly initialized
 	if not _streams_initialized:
 		initialize_audio_streams()
 	
+	# Set bell volume to a reasonable level to avoid harshness
+	bell_player.volume_db = -6.0
+	
 	# Play the bell
 	bell_player.play()
 	bell_played.emit()
+	
+	# Set a safety timer to ensure bell stops after maximum duration
+	var bell_timer = get_tree().create_timer(3.0)
+	bell_timer.timeout.connect(func(): 
+		if bell_player.playing:
+			bell_player.stop()
+			sound_generator.reset_bell_generator()
+	)
 
 # Stop the ambient sound
 func stop_ambient() -> void:
 	if ambient_player.playing:
+		# First pause to avoid glitches
+		ambient_player.stream_paused = true
+		await get_tree().process_frame
+		
+		# Then stop completely
 		ambient_player.stop()
+		
 		# Reset sound generator state to prevent artifacts
 		sound_generator.reset_ambient_generator()
 		current_sound_name = "none"
@@ -143,5 +172,18 @@ func _on_ambient_player_finished() -> void:
 
 # Handle bell player finished
 func _on_bell_player_finished() -> void:
+	# Double-check that bell is properly stopped
+	if bell_player.playing:
+		bell_player.stop()
+	
 	# Reset sound generator state
-	sound_generator.reset_bell_generator() 
+	sound_generator.reset_bell_generator()
+	
+	# Ensure the ambient sound can continue cleanly
+	if current_sound_name != "none" and not ambient_player.playing:
+		# Re-initialize stream if needed
+		if not ambient_player.stream:
+			initialize_audio_streams()
+		
+		# Restart ambient sound
+		ambient_player.play() 
