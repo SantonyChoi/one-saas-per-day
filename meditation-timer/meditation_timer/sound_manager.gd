@@ -1,89 +1,147 @@
 class_name SoundManager
 extends Node
 
-signal sound_changed(type: String)
+signal sound_changed(sound_name: String)
+signal bell_played()
 
+# Sound Types enum
 enum SoundType { NONE, RAIN, OCEAN, BIRDS }
 
-var current_sound: SoundType = SoundType.NONE
-var audio_generators: Dictionary = {}
+# Current ambient sound type
+var current_sound_type: SoundType = SoundType.NONE
+var current_sound_name: String = "none"
 
+# References to audio components
 @onready var ambient_player: AudioStreamPlayer = $AmbientPlayer
 @onready var bell_player: AudioStreamPlayer = $BellPlayer
-@onready var sound_generator: Node = $SoundGenerator
+@onready var sound_generator: ProceduralSoundGenerator = $ProceduralSoundGenerator
 
-# Audio streams
-var rain_stream: AudioStream
-var ocean_stream: AudioStream 
-var birds_stream: AudioStream
-var bell_stream: AudioStream
+# Audio configuration
+@export var sample_rate: int = 44100
+@export var buffer_length_seconds: float = 1.0
+
+# Buffer size calculated from sample rate
+var buffer_size: int
+
+# Ready state flags
+var _ready_complete: bool = false
+var _streams_initialized: bool = false
 
 func _ready() -> void:
-	# Load audio streams
-	rain_stream = preload("res://sounds/rain.tres")
-	ocean_stream = preload("res://sounds/ocean.tres")
-	birds_stream = preload("res://sounds/birds.tres")
-	bell_stream = preload("res://sounds/bell.tres")
+	buffer_size = int(sample_rate * buffer_length_seconds)
 	
-	# Setup bell player
-	bell_player.stream = bell_stream
+	# Initialize audio streams
+	initialize_audio_streams()
+	
+	# Configure sound generator
+	sound_generator.setup(ambient_player, bell_player)
 	
 	# Connect signals
-	ambient_player.finished.connect(_on_ambient_player_finished)
-	bell_player.finished.connect(_on_bell_player_finished)
+	if ambient_player.get_signal_connection_list("finished").is_empty():
+		ambient_player.finished.connect(_on_ambient_player_finished)
+	
+	if bell_player.get_signal_connection_list("finished").is_empty():
+		bell_player.finished.connect(_on_bell_player_finished)
+	
+	_ready_complete = true
 
-func set_sound(type: SoundType) -> void:
-	# Stop current sound if playing
+# Initialize audio streams for procedural generation
+func initialize_audio_streams() -> void:
+	# Create and configure ambient stream
+	var ambient_stream = AudioStreamGenerator.new()
+	ambient_stream.mix_rate = sample_rate
+	ambient_stream.buffer_length = buffer_length_seconds
+	ambient_player.stream = ambient_stream
+	
+	# Create and configure bell stream
+	var bell_stream = AudioStreamGenerator.new()
+	bell_stream.mix_rate = sample_rate
+	bell_stream.buffer_length = buffer_length_seconds * 0.5  # Shorter buffer for bell
+	bell_player.stream = bell_stream
+	
+	_streams_initialized = true
+
+# Set the ambient sound type
+func set_sound(sound_name: String) -> void:
+	# Stop current sound if playing and it's different
+	if ambient_player.playing and sound_name != current_sound_name:
+		stop_ambient()
+		# Wait one frame to ensure clean stop
+		await get_tree().process_frame
+	
+	# Update sound type
+	current_sound_name = sound_name
+	
+	# Update sound generator with new type
+	sound_generator.set_sound_type(sound_name)
+	
+	# Emit signal for UI updates
+	sound_changed.emit(sound_name)
+	
+	# Start the new sound if not "none"
+	if sound_name != "none":
+		if not ambient_player.playing:
+			# Ensure streams are initialized in case this is called before _ready
+			if not _streams_initialized:
+				initialize_audio_streams()
+			
+			# Start playing
+			ambient_player.play()
+	
+	# Set enum value for internal tracking
+	match sound_name:
+		"rain": current_sound_type = SoundType.RAIN
+		"ocean": current_sound_type = SoundType.OCEAN
+		"birds": current_sound_type = SoundType.BIRDS
+		"none": current_sound_type = SoundType.NONE
+
+# Play the bell sound
+func play_bell() -> void:
+	# Stop any existing bell sound
+	if bell_player.playing:
+		bell_player.stop()
+		sound_generator.reset_bell_generator()
+		await get_tree().process_frame
+	
+	# Ensure the stream is properly initialized
+	if not _streams_initialized:
+		initialize_audio_streams()
+	
+	# Play the bell
+	bell_player.play()
+	bell_played.emit()
+
+# Stop the ambient sound
+func stop_ambient() -> void:
 	if ambient_player.playing:
 		ambient_player.stop()
-	
-	current_sound = type
-	
-	# Set the appropriate stream based on the sound type
-	match type:
-		SoundType.RAIN:
-			ambient_player.stream = rain_stream
-			ambient_player.play()
-		SoundType.OCEAN:
-			ambient_player.stream = ocean_stream
-			ambient_player.play()
-		SoundType.BIRDS:
-			ambient_player.stream = birds_stream
-			ambient_player.play()
-		SoundType.NONE:
-			pass # No sound selected
-	
-	emit_signal("sound_changed", get_sound_name(type))
+		# Reset sound generator state to prevent artifacts
+		sound_generator.reset_ambient_generator()
+		current_sound_name = "none"
+		current_sound_type = SoundType.NONE
+		sound_changed.emit("none")
 
-func get_sound_name(type: SoundType) -> String:
-	match type:
-		SoundType.RAIN: return "rain"
-		SoundType.OCEAN: return "ocean"
-		SoundType.BIRDS: return "birds"
-		_: return "none"
-
-func get_current_sound_type() -> SoundType:
-	return current_sound
-
-func play_bell() -> void:
-	bell_player.play()
-
+# Pause the ambient sound
 func pause_ambient() -> void:
 	if ambient_player.playing:
 		ambient_player.stream_paused = true
 
+# Resume the ambient sound
 func resume_ambient() -> void:
-	if current_sound != SoundType.NONE and ambient_player.stream_paused:
+	if ambient_player.playing:
 		ambient_player.stream_paused = false
 
-func stop_ambient() -> void:
-	ambient_player.stop()
-
+# Handle ambient player finished
 func _on_ambient_player_finished() -> void:
-	# If the sound finished playing, restart it (for looping ambient sounds)
-	if current_sound != SoundType.NONE:
-		ambient_player.play()
+	# Reset sound generator state
+	sound_generator.reset_ambient_generator()
+	
+	# Update state
+	current_sound_name = "none"
+	current_sound_type = SoundType.NONE
+	sound_changed.emit("none")
 
+# Handle bell player finished
 func _on_bell_player_finished() -> void:
-	# Bell finished playing - no action needed
-	pass 
+	# Reset sound generator state
+	sound_generator.reset_bell_generator() 

@@ -12,12 +12,12 @@ extends Node
 @export var bell_amplitude: float = 0.7
 
 @export_group("Performance Settings")
-@export var buffer_size: int = 1024  # Smaller for less latency, larger for better performance
+@export var buffer_size: int = 2048  # Increased for better stability
 @export var optimization_level: int = 1  # 0=quality, 1=balanced, 2=performance
 
-# References to audio players
-@onready var ambient_player: AudioStreamPlayer = $"../AmbientPlayer"
-@onready var bell_player: AudioStreamPlayer = $"../BellPlayer"
+# References to audio players (will be set by sound manager)
+var ambient_player: AudioStreamPlayer
+var bell_player: AudioStreamPlayer
 
 # Sound generator variables
 var ambient_playback: AudioStreamGeneratorPlayback
@@ -26,47 +26,88 @@ var ambient_phase: float = 0.0
 var bird_chirp_timer: float = 0.0
 var wave_phase: float = 0.0
 
-# Pre-allocated buffer for optimization
-var audio_buffer: PackedVector2Array
+# Pre-allocated buffers for optimization
+var ambient_buffer: PackedVector2Array
+var bell_buffer: PackedVector2Array
 
 # Sound types
 enum SoundType { RAIN, OCEAN, BIRDS, BELL }
 var current_sound_type: SoundType = SoundType.RAIN
 
+# Generation state tracking
+var is_generating: bool = false
+var playback_error_reported: bool = false
+
 func _ready() -> void:
-	# Pre-allocate buffer for optimization
-	audio_buffer = PackedVector2Array()
-	audio_buffer.resize(buffer_size)
+	# Pre-allocate buffers for optimization
+	ambient_buffer = PackedVector2Array()
+	ambient_buffer.resize(buffer_size)
 	
-	# Connect to the parent audio player's signals
-	ambient_player.finished.connect(_on_ambient_player_finished)
-	bell_player.finished.connect(_on_bell_player_finished)
+	bell_buffer = PackedVector2Array()
+	bell_buffer.resize(buffer_size)
+
+# Setup the sound generator with audio player references
+func setup(ambient_audio_player: AudioStreamPlayer, bell_audio_player: AudioStreamPlayer) -> void:
+	ambient_player = ambient_audio_player
+	bell_player = bell_audio_player
+	
+	# Connect additional signals
+	if ambient_player.get_signal_connection_list("finished").is_empty():
+		ambient_player.finished.connect(_on_ambient_player_finished)
+	
+	if bell_player.get_signal_connection_list("finished").is_empty():
+		bell_player.finished.connect(_on_bell_player_finished)
 
 func _process(_delta: float) -> void:
 	# Generate ambient sound if needed
-	if ambient_player.playing and ambient_player.stream is AudioStreamGenerator:
-		if not ambient_playback:
-			ambient_playback = ambient_player.get_stream_playback()
-		
-		# Fill buffer as needed
-		_fill_ambient_buffer()
+	if ambient_player and ambient_player.playing and not ambient_player.stream_paused:
+		if ambient_player.stream is AudioStreamGenerator:
+			_ensure_ambient_playback()
+			_fill_ambient_buffer()
 	
 	# Generate bell sound if needed
-	if bell_player.playing and bell_player.stream is AudioStreamGenerator:
-		if not bell_playback:
-			bell_playback = bell_player.get_stream_playback()
-		
-		# Fill bell buffer
-		_fill_bell_buffer()
+	if bell_player and bell_player.playing and not bell_player.stream_paused:
+		if bell_player.stream is AudioStreamGenerator:
+			_ensure_bell_playback()
+			_fill_bell_buffer()
 
+# Ensures we have a valid playback object
+func _ensure_ambient_playback() -> void:
+	if not ambient_playback:
+		if ambient_player.get_stream_playback():
+			ambient_playback = ambient_player.get_stream_playback()
+		else:
+			if not playback_error_reported:
+				print("Warning: Unable to get ambient stream playback. Sound may not work correctly.")
+				playback_error_reported = true
+			return
+
+func _ensure_bell_playback() -> void:
+	if not bell_playback:
+		if bell_player.get_stream_playback():
+			bell_playback = bell_player.get_stream_playback()
+		else:
+			if not playback_error_reported:
+				print("Warning: Unable to get bell stream playback. Sound may not work correctly.")
+				playback_error_reported = true
+			return
+
+# Set the type of sound to generate
 func set_sound_type(type: String) -> void:
 	match type:
 		"rain": current_sound_type = SoundType.RAIN
 		"ocean": current_sound_type = SoundType.OCEAN
 		"birds": current_sound_type = SoundType.BIRDS
+		"none": 
+			# Just clear buffer when setting to none
+			_clear_ambient_buffer()
 		_: current_sound_type = SoundType.RAIN
 
+# Fill the ambient sound buffer
 func _fill_ambient_buffer() -> void:
+	if not ambient_playback:
+		return
+		
 	var frames_available = ambient_playback.get_frames_available()
 	
 	# Performance optimization - only process if enough frames needed
@@ -85,13 +126,19 @@ func _fill_ambient_buffer() -> void:
 			SoundType.BIRDS:
 				_generate_birds(frames_to_fill)
 			_:
-				_generate_white_noise(frames_to_fill, 0.1)  # Default
-				
-		# Push the buffer
-		ambient_playback.push_buffer(audio_buffer.slice(0, frames_to_fill))
+				_generate_white_noise(frames_to_fill, 0.05)  # Lower amplitude default
+		
+		if ambient_player.playing and not ambient_player.stream_paused:
+			# Only push the buffer if still playing
+			ambient_playback.push_buffer(ambient_buffer.slice(0, frames_to_fill))
+		
 		frames_available -= frames_to_fill
 
+# Fill the bell sound buffer
 func _fill_bell_buffer() -> void:
+	if not bell_playback:
+		return
+		
 	var frames_available = bell_playback.get_frames_available()
 	
 	# Performance optimization - only process if enough frames needed
@@ -101,8 +148,35 @@ func _fill_bell_buffer() -> void:
 	while frames_available > 0:
 		var frames_to_fill = min(frames_available, buffer_size)
 		_generate_bell(frames_to_fill)
-		bell_playback.push_buffer(audio_buffer.slice(0, frames_to_fill))
+		
+		if bell_player.playing and not bell_player.stream_paused:
+			# Only push the buffer if still playing
+			bell_playback.push_buffer(bell_buffer.slice(0, frames_to_fill))
+		
 		frames_available -= frames_to_fill
+
+# Clear ambient buffer (fills with silence)
+func _clear_ambient_buffer() -> void:
+	for i in range(ambient_buffer.size()):
+		ambient_buffer[i] = Vector2.ZERO
+
+# Clear bell buffer (fills with silence)
+func _clear_bell_buffer() -> void:
+	for i in range(bell_buffer.size()):
+		bell_buffer[i] = Vector2.ZERO
+
+# Reset ambient generator state
+func reset_ambient_generator() -> void:
+	ambient_playback = null
+	ambient_phase = 0.0
+	wave_phase = 0.0
+	bird_chirp_timer = 0.0
+	_clear_ambient_buffer()
+
+# Reset bell generator state
+func reset_bell_generator() -> void:
+	bell_playback = null
+	_clear_bell_buffer()
 
 # Improved rain sound generator with better filtering
 func _generate_rain(frames: int) -> void:
@@ -118,7 +192,7 @@ func _generate_rain(frames: int) -> void:
 		var left_channel = ambient_phase + randf_range(-0.05, 0.05) * rain_amplitude
 		var right_channel = ambient_phase + randf_range(-0.05, 0.05) * rain_amplitude
 		
-		audio_buffer[i] = Vector2(left_channel, right_channel)
+		ambient_buffer[i] = Vector2(left_channel, right_channel)
 
 # Ocean sound with improved wave simulation
 func _generate_ocean(frames: int) -> void:
@@ -141,7 +215,7 @@ func _generate_ocean(frames: int) -> void:
 		var left = ambient_phase * (1.0 - stereo_offset)
 		var right = ambient_phase * (1.0 + stereo_offset)
 		
-		audio_buffer[i] = Vector2(left, right)
+		ambient_buffer[i] = Vector2(left, right)
 
 # Enhanced bird sound generator with more natural chirps
 func _generate_birds(frames: int) -> void:
@@ -197,8 +271,8 @@ func _add_bird_chirp(frames: int, offset: float) -> void:
 		var right_gain = (1.0 + pan) / 2.0 + 0.5
 		
 		# Add to existing buffer (don't replace existing ambient sound)
-		var current = audio_buffer[chirp_start_idx + i]
-		audio_buffer[chirp_start_idx + i] = Vector2(
+		var current = ambient_buffer[chirp_start_idx + i]
+		ambient_buffer[chirp_start_idx + i] = Vector2(
 			current.x + chirp * left_gain, 
 			current.y + chirp * right_gain
 		)
@@ -228,7 +302,7 @@ func _generate_bell(frames: int) -> void:
 		
 		# Apply a slight stereo widening
 		var stereo_width = 0.1
-		audio_buffer[i] = Vector2(
+		bell_buffer[i] = Vector2(
 			value * (1.0 - stereo_width), 
 			value * (1.0 + stereo_width)
 		)
@@ -238,7 +312,7 @@ func _generate_white_noise(frames: int, amplitude: float) -> void:
 	for i in range(frames):
 		var noise = randf_range(-1.0, 1.0) * amplitude
 		var noise2 = randf_range(-1.0, 1.0) * amplitude  # Different random value for right channel
-		audio_buffer[i] = Vector2(noise, noise2)  # True stereo noise
+		ambient_buffer[i] = Vector2(noise, noise2)  # True stereo noise
 
 # Clean up on audio player finished
 func _on_ambient_player_finished() -> void:

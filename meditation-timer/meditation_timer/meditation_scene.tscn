@@ -1,360 +1,227 @@
-[gd_scene load_steps=14 format=3 uid="uid://rh64sv5aqqn7"]
+[gd_scene load_steps=8 format=3 uid="uid://bhbh1kmt5q1g5"]
 
-[ext_resource type="Script" path="res://meditation_timer/ui_controller.gd" id="1_3bnkm"]
-[ext_resource type="Script" path="res://meditation_timer/meditation_session.gd" id="2_qvyvt"]
-[ext_resource type="Script" path="res://meditation_timer/sound_manager.gd" id="3_2cbtq"]
-[ext_resource type="AudioStream" uid="uid://c6n82kh02rhts" path="res://sounds/bell.tres" id="4_cjrfu"]
-[ext_resource type="Script" path="res://meditation_timer/sound_generator.gd" id="5_iq56s"]
-[ext_resource type="Script" path="res://meditation_timer/breathing_guide.gd" id="6_aie2l"]
+[ext_resource type="Script" path="res://meditation_timer/meditation_session.gd" id="1_a531q"]
+[ext_resource type="Script" path="res://meditation_timer/sound_manager.gd" id="2_52g1n"]
+[ext_resource type="Script" path="res://meditation_timer/sound_generator.gd" id="3_2imbn"]
+[ext_resource type="Script" path="res://meditation_timer/meditation_ui_controller.gd" id="4_rla1k"]
+[ext_resource type="Script" path="res://meditation_timer/breathing_guide.gd" id="5_kddns"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nccgd"]
-bg_color = Color(0.0941176, 0.0941176, 0.129412, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6eiqa"]
-bg_color = Color(0.207843, 0.207843, 0.286275, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ylwqm"]
+bg_color = Color(0.109804, 0.596078, 0.815686, 1)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a6jvg"]
-bg_color = Color(0.160784, 0.160784, 0.219608, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5hwpv"]
+bg_color = Color(0.631373, 0.866667, 0.929412, 1)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3bnxm"]
-bg_color = Color(0.243137, 0.309804, 0.403922, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[node name="MeditationTimerScene" type="Node"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qy4dw"]
-bg_color = Color(0.0941176, 0.0941176, 0.129412, 0.705882)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.317647, 0.396078, 0.529412, 0.27451)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
+[node name="MeditationSession" type="Node" parent="."]
+script = ExtResource("1_a531q")
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lbmcn"]
-bg_color = Color(0.160784, 0.160784, 0.219608, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[node name="SoundManager" type="Node" parent="."]
+script = ExtResource("2_52g1n")
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2rngc"]
-bg_color = Color(0.243137, 0.270588, 0.352941, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[node name="AmbientPlayer" type="AudioStreamPlayer" parent="SoundManager"]
 
-[node name="MeditationTimer" type="Control"]
+[node name="BellPlayer" type="AudioStreamPlayer" parent="SoundManager"]
+
+[node name="ProceduralSoundGenerator" type="Node" parent="SoundManager"]
+script = ExtResource("3_2imbn")
+
+[node name="UI" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_3bnkm")
+script = ExtResource("4_rla1k")
 
-[node name="SessionManager" type="Node" parent="."]
-script = ExtResource("2_qvyvt")
-
-[node name="SessionTimer" type="Timer" parent="SessionManager"]
-one_shot = true
-
-[node name="UpdateTimer" type="Timer" parent="SessionManager"]
-
-[node name="SoundManager" type="Node" parent="."]
-script = ExtResource("3_2cbtq")
-
-[node name="AmbientPlayer" type="AudioStreamPlayer" parent="SoundManager"]
-bus = &"Master"
-
-[node name="BellPlayer" type="AudioStreamPlayer" parent="SoundManager"]
-stream = ExtResource("4_cjrfu")
-bus = &"Master"
-
-[node name="SoundGenerator" type="Node" parent="SoundManager"]
-script = ExtResource("5_iq56s")
-
-[node name="BreathingGuide" type="Node" parent="."]
-script = ExtResource("6_aie2l")
-
-[node name="Background" type="Panel" parent="."]
+[node name="BackgroundPanel" type="Panel" parent="UI"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_nccgd")
 
-[node name="FlashOverlay" type="ColorRect" parent="."]
-visible = false
+[node name="TitleLabel" type="Label" parent="UI"]
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
+offset_top = 20.0
+offset_bottom = 72.0
 grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(1, 1, 1, 0)
-
-[node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 32
-
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 30
-
-[node name="HeaderLabel" type="Label" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.2)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 36
 text = "Meditation Timer"
 horizontal_alignment = 1
 
-[node name="SetupContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 20
+[node name="TimeDisplay" type="Label" parent="UI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -96.0
+offset_top = -45.0
+offset_right = 96.0
+offset_bottom = 45.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 64
+text = "00:00"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="DurationLabel" type="Label" parent="MarginContainer/VBoxContainer/SetupContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.803922, 0.803922, 0.878431, 1)
-theme_override_font_sizes/font_size = 24
-text = "Select Duration"
+[node name="DurationSlider" type="HSlider" parent="UI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -145.0
+offset_top = 60.0
+offset_right = 145.0
+offset_bottom = 76.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/grabber_area = SubResource("StyleBoxFlat_ylwqm")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_5hwpv")
+
+[node name="DurationLabel" type="Label" parent="UI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -51.0
+offset_top = 85.0
+offset_right = 51.0
+offset_bottom = 111.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "5 minutes"
 horizontal_alignment = 1
 
-[node name="DurationButtons" type="HBoxContainer" parent="MarginContainer/VBoxContainer/SetupContainer"]
-layout_mode = 2
-theme_override_constants/separation = 16
+[node name="StartButton" type="Button" parent="UI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -48.0
+offset_top = 120.0
+offset_right = 48.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Start"
+
+[node name="StopButton" type="Button" parent="UI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -48.0
+offset_top = 120.0
+offset_right = 48.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Stop"
+
+[node name="SoundButtons" type="HBoxContainer" parent="UI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = 180.0
+offset_right = 200.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
 alignment = 1
 
-[node name="FiveMinButton" type="Button" parent="MarginContainer/VBoxContainer/SetupContainer/DurationButtons"]
-custom_minimum_size = Vector2(100, 80)
+[node name="NoneButton" type="Button" parent="UI/SoundButtons"]
 layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_6eiqa")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_3bnxm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_3bnxm")
-text = "5 min"
-
-[node name="TenMinButton" type="Button" parent="MarginContainer/VBoxContainer/SetupContainer/DurationButtons"]
-custom_minimum_size = Vector2(100, 80)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_6eiqa")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_3bnxm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_3bnxm")
-text = "10 min"
-
-[node name="FifteenMinButton" type="Button" parent="MarginContainer/VBoxContainer/SetupContainer/DurationButtons"]
-custom_minimum_size = Vector2(100, 80)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_6eiqa")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_3bnxm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_3bnxm")
-text = "15 min"
-
-[node name="ThirtyMinButton" type="Button" parent="MarginContainer/VBoxContainer/SetupContainer/DurationButtons"]
-custom_minimum_size = Vector2(100, 80)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_6eiqa")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_3bnxm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_3bnxm")
-text = "30 min"
-
-[node name="SoundOptionLabel" type="Label" parent="MarginContainer/VBoxContainer/SetupContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.803922, 0.803922, 0.878431, 1)
-theme_override_font_sizes/font_size = 24
-text = "Background Sound"
-horizontal_alignment = 1
-
-[node name="SoundOptions" type="HBoxContainer" parent="MarginContainer/VBoxContainer/SetupContainer"]
-layout_mode = 2
-alignment = 1
-
-[node name="RainButton" type="Button" parent="MarginContainer/VBoxContainer/SetupContainer/SoundOptions"]
-custom_minimum_size = Vector2(100, 50)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_6eiqa")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_3bnxm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_3bnxm")
-toggle_mode = true
-text = "Rain"
-
-[node name="OceanButton" type="Button" parent="MarginContainer/VBoxContainer/SetupContainer/SoundOptions"]
-custom_minimum_size = Vector2(100, 50)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_6eiqa")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_3bnxm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_3bnxm")
-toggle_mode = true
-text = "Ocean"
-
-[node name="BirdsButton" type="Button" parent="MarginContainer/VBoxContainer/SetupContainer/SoundOptions"]
-custom_minimum_size = Vector2(100, 50)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_6eiqa")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_3bnxm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_3bnxm")
-toggle_mode = true
-text = "Birds"
-
-[node name="NoneButton" type="Button" parent="MarginContainer/VBoxContainer/SetupContainer/SoundOptions"]
-custom_minimum_size = Vector2(100, 50)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_6eiqa")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_3bnxm")
-theme_override_styles/focus = SubResource("StyleBoxFlat_3bnxm")
 toggle_mode = true
 button_pressed = true
 text = "None"
 
-[node name="MeditationContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
-visible = false
+[node name="RainButton" type="Button" parent="UI/SoundButtons"]
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 20
+toggle_mode = true
+text = "Rain"
 
-[node name="TimerContainer" type="CenterContainer" parent="MarginContainer/VBoxContainer/MeditationContainer"]
+[node name="OceanButton" type="Button" parent="UI/SoundButtons"]
 layout_mode = 2
+toggle_mode = true
+text = "Ocean"
 
-[node name="RemainingTimeLabel" type="Label" parent="MarginContainer/VBoxContainer/MeditationContainer/TimerContainer"]
+[node name="BirdsButton" type="Button" parent="UI/SoundButtons"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.196078)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 48
-text = "05:00"
-horizontal_alignment = 1
+toggle_mode = true
+text = "Birds"
 
-[node name="BreathingGuideContainer" type="CenterContainer" parent="MarginContainer/VBoxContainer/MeditationContainer"]
-layout_mode = 2
-size_flags_vertical = 3
+[node name="BreathingGuide" type="Control" parent="UI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -210.0
+offset_right = 100.0
+offset_bottom = -110.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_kddns")
 
-[node name="BreathingCircle" type="Panel" parent="MarginContainer/VBoxContainer/MeditationContainer/BreathingGuideContainer"]
-custom_minimum_size = Vector2(200, 200)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_qy4dw")
+[node name="BreathCircle" type="ColorRect" parent="UI/BreathingGuide"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -30.0
+offset_top = -30.0
+offset_right = 30.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.278431, 0.796078, 0.937255, 0.65098)
 
-[node name="BreathingLabel" type="Label" parent="MarginContainer/VBoxContainer/MeditationContainer/BreathingGuideContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.803922, 0.803922, 0.878431, 1)
-theme_override_font_sizes/font_size = 24
-text = "Breathe"
-horizontal_alignment = 1
-
-[node name="ButtonsContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MeditationContainer"]
-layout_mode = 2
-theme_override_constants/separation = 20
-alignment = 1
-
-[node name="PauseButton" type="Button" parent="MarginContainer/VBoxContainer/MeditationContainer/ButtonsContainer"]
-custom_minimum_size = Vector2(150, 60)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_lbmcn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_2rngc")
-theme_override_styles/focus = SubResource("StyleBoxFlat_2rngc")
-text = "Pause"
-
-[node name="StopButton" type="Button" parent="MarginContainer/VBoxContainer/MeditationContainer/ButtonsContainer"]
-custom_minimum_size = Vector2(150, 60)
-layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0.901961, 0.901961, 0.901961, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(0.615686, 0.807843, 0.94902, 1)
-theme_override_colors/font_focus_color = Color(0.839216, 0.929412, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_lbmcn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_a6jvg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_2rngc")
-theme_override_styles/focus = SubResource("StyleBoxFlat_2rngc")
-text = "Stop" 
+[node name="BreathLabel" type="Label" parent="UI/BreathingGuide"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -82.0
+offset_top = -14.0
+offset_right = 82.0
+offset_bottom = 12.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Breathe In"
+horizontal_alignment = 1 

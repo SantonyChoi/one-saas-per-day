@@ -1,87 +1,144 @@
 class_name MeditationSession
 extends Node
 
-signal session_started(duration_minutes: int)
-signal session_paused
-signal session_resumed
-signal session_ended
-signal time_updated(time_left: float)
+# Signals
+signal session_started()
+signal session_ended()
+signal session_paused()
+signal session_resumed()
+signal time_updated(minutes: int, seconds: int)
 
+# Session state enum
 enum SessionState { IDLE, RUNNING, PAUSED }
 
-var state: SessionState = SessionState.IDLE
-var duration_minutes: int = 5
-var time_remaining: float = 0.0
+# Session parameters
+var session_duration_seconds: int = 0
+var remaining_seconds: int = 0
+var current_state: SessionState = SessionState.IDLE
 
-@onready var timer: Timer = $SessionTimer
-@onready var update_timer: Timer = $UpdateTimer
+# Timers
+var session_timer: Timer
+var update_timer: Timer
 
 func _ready() -> void:
-	timer.one_shot = true
-	timer.timeout.connect(_on_timer_timeout)
+	# Create and configure session timer (one-shot)
+	session_timer = Timer.new()
+	session_timer.one_shot = true
+	session_timer.timeout.connect(_on_session_timer_timeout)
+	add_child(session_timer)
 	
-	update_timer.wait_time = 0.1  # Update 10 times per second for smoother time display
+	# Create and configure update timer (1-second intervals)
+	update_timer = Timer.new()
+	update_timer.wait_time = 1.0
 	update_timer.timeout.connect(_on_update_timer_timeout)
+	add_child(update_timer)
 
-func start_session(minutes: int) -> void:
-	if state != SessionState.IDLE:
-		end_session()  # End existing session if one is in progress
+# Start a new meditation session
+func start_session(duration_minutes: int) -> void:
+	# Don't start if a session is already running
+	if current_state != SessionState.IDLE:
+		return
 	
-	duration_minutes = minutes
-	time_remaining = minutes * 60.0
+	# Calculate duration in seconds
+	session_duration_seconds = duration_minutes * 60
+	remaining_seconds = session_duration_seconds
 	
-	timer.wait_time = time_remaining
-	timer.start()
+	# Update timers
+	session_timer.wait_time = session_duration_seconds
+	session_timer.start()
 	update_timer.start()
 	
-	state = SessionState.RUNNING
-	emit_signal("session_started", duration_minutes)
-	emit_signal("time_updated", time_remaining)
+	# Update state
+	current_state = SessionState.RUNNING
+	
+	# Emit initial time update
+	_update_time_display()
+	
+	# Emit started signal
+	session_started.emit()
 
-func pause_session() -> void:
-	if state != SessionState.RUNNING:
-		return
-		
-	timer.paused = true
-	update_timer.paused = true
-	state = SessionState.PAUSED
-	emit_signal("session_paused")
-
-func resume_session() -> void:
-	if state != SessionState.PAUSED:
-		return
-		
-	timer.paused = false
-	update_timer.paused = false
-	state = SessionState.RUNNING
-	emit_signal("session_resumed")
-
+# End the current session
 func end_session() -> void:
-	timer.stop()
+	# Only end if a session is active
+	if current_state == SessionState.IDLE:
+		return
+	
+	# Stop timers
+	session_timer.stop()
 	update_timer.stop()
 	
-	# Only emit signal if we were in an active session
-	if state != SessionState.IDLE:
-		emit_signal("session_ended")
+	# Reset state
+	current_state = SessionState.IDLE
+	remaining_seconds = 0
 	
-	state = SessionState.IDLE
-	time_remaining = 0.0
+	# Emit ended signal
+	session_ended.emit()
 
-func get_formatted_time() -> String:
-	var minutes := int(time_remaining) / 60
-	var seconds := int(time_remaining) % 60
+# Pause the current session
+func pause_session() -> void:
+	# Only pause if running
+	if current_state != SessionState.RUNNING:
+		return
+	
+	# Pause timers
+	session_timer.paused = true
+	update_timer.paused = true
+	
+	# Update state
+	current_state = SessionState.PAUSED
+	
+	# Emit paused signal
+	session_paused.emit()
+
+# Resume a paused session
+func resume_session() -> void:
+	# Only resume if paused
+	if current_state != SessionState.PAUSED:
+		return
+	
+	# Resume timers
+	session_timer.paused = false
+	update_timer.paused = false
+	
+	# Update state
+	current_state = SessionState.RUNNING
+	
+	# Emit resumed signal
+	session_resumed.emit()
+
+# Toggle between pause and resume
+func toggle_pause() -> void:
+	if current_state == SessionState.RUNNING:
+		pause_session()
+	elif current_state == SessionState.PAUSED:
+		resume_session()
+
+# Get the current session state
+func get_state() -> SessionState:
+	return current_state
+
+# Get remaining time as formatted string (MM:SS)
+func get_time_string() -> String:
+	var minutes = int(remaining_seconds / 60)
+	var seconds = int(remaining_seconds % 60)
 	return "%02d:%02d" % [minutes, seconds]
 
-func is_session_active() -> bool:
-	return state != SessionState.IDLE
-
-func is_session_paused() -> bool:
-	return state == SessionState.PAUSED
-
-func _on_timer_timeout() -> void:
+# Handle session timer timeout
+func _on_session_timer_timeout() -> void:
+	_update_time_display()
 	end_session()
 
+# Handle update timer timeout
 func _on_update_timer_timeout() -> void:
-	if state == SessionState.RUNNING:
-		time_remaining = timer.time_left
-		emit_signal("time_updated", time_remaining) 
+	# Decrease remaining time
+	if remaining_seconds > 0:
+		remaining_seconds -= 1
+	
+	# Update time display
+	_update_time_display()
+
+# Update time display and emit signal
+func _update_time_display() -> void:
+	var minutes = int(remaining_seconds / 60)
+	var seconds = int(remaining_seconds % 60)
+	time_updated.emit(minutes, seconds) 
