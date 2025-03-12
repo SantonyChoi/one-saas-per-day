@@ -1,0 +1,5 @@
+[gd_resource type="AudioStreamGenerator" format=3 uid="uid://blvwxw6a08c3h"]
+
+[resource]
+mix_rate = 44100.0
+buffer_length = 0.5 
