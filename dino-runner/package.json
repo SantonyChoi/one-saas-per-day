@@ -1,0 +1,21 @@
+{
+  "name": "dino-runner",
+  "version": "1.0.0",
+  "description": "A fun, pixel-art style endless runner game inspired by Chrome's offline dinosaur game",
+  "main": "index.html",
+  "scripts": {
+    "generate-assets": "node generate-assets.js"
+  },
+  "keywords": [
+    "game",
+    "dinosaur",
+    "runner",
+    "html5",
+    "canvas"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "canvas": "^2.11.0"
+  }
+} 
