@@ -306,38 +306,32 @@ func _add_bird_chirp(frames: int, offset: float) -> void:
 
 # Bell sound with improved harmonics
 func _generate_bell(frames: int) -> void:
-	# Bell parameters
-	var base_freq = 320.0  # Lower frequency (E4) for a more pleasant bell
-	var decay = 5.0        # Faster decay rate to prevent lingering
+	# Bell parameters - simplified for short "blip" sound
+	var base_freq = 1200.0  # Higher frequency for sharp sound
+	var decay = 20.0        # Very fast decay for short sound
 	
 	for i in range(frames):
 		var t = float(i) / 44100.0
 		
-		# Use exponential envelope with delay to avoid clicking
+		# Very short sound
+		if t > 0.15:  # Cut off after 150ms
+			bell_buffer[i] = Vector2.ZERO
+			continue
+		
+		# Quick attack and decay
 		var envelope = exp(-t * decay) * bell_amplitude
-		if t < 0.002:  # Gentle attack to prevent clicks
-			envelope *= t / 0.002
+		if t < 0.001:  # Very quick attack
+			envelope *= t / 0.001
 		
-		# Main tone with decay
-		var main_tone = sin(t * base_freq * TAU) * envelope
+		# Simple sine wave with fast decay
+		var value = sin(t * base_freq * TAU) * envelope
 		
-		# More harmonious partials for a softer bell sound
-		var harmonic1 = sin(t * base_freq * 2.0 * TAU) * exp(-t * decay * 1.8) * bell_amplitude * 0.4
-		var harmonic2 = sin(t * base_freq * 3.0 * TAU) * exp(-t * decay * 2.2) * bell_amplitude * 0.2
-		var harmonic3 = sin(t * base_freq * 5.0 * TAU) * exp(-t * decay * 2.5) * bell_amplitude * 0.1
-		
-		# Remove the detuned sound which can cause harshness
-		# var detuned = sin(t * base_freq * 1.003 * TAU) * exp(-t * decay * 1.1) * bell_amplitude * 0.3
-		
-		# Combine all partials
-		var value = main_tone + harmonic1 + harmonic2 + harmonic3
-		
-		# Apply a slight stereo widening
-		var stereo_width = 0.05  # Reduce stereo width for more focused sound
-		bell_buffer[i] = Vector2(
-			value * (1.0 - stereo_width), 
-			value * (1.0 + stereo_width)
-		)
+		# Centered sound
+		bell_buffer[i] = Vector2(value, value)
+	
+	# Ensure the rest of the buffer is silent
+	for i in range(min(int(0.15 * 44100) + 1, frames), frames):
+		bell_buffer[i] = Vector2.ZERO
 
 # Basic white noise generator (used as a building block for other sounds)
 func _generate_white_noise(frames: int, amplitude: float) -> void:
