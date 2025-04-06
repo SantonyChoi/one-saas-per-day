@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 스타트업 동향 리포트</title>
+    <style>
+        :root {
+            --primary-color: #4285f4;
+            --secondary-color: #34a853;
+            --accent-color: #ea4335;
+            --background-color: #f8f9fa;
+            --text-color: #202124;
+            --light-gray: #dadce0;
+        }
+        
+        body {
+            font-family: 'Roboto', 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .report-date {
+            color: #5f6368;
+            font-size: 14px;
+        }
+        
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            border-bottom: 2px solid var(--light-gray);
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 24px;
+        }
+        
+        h3 {
+            font-size: 20px;
+            color: var(--secondary-color);
+        }
+        
+        .summary-box {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-stats {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background-color: white;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            width: calc(25% - 20px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h4 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: #5f6368;
+        }
+        
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .story-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .story-item {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: transform 0.2s;
+        }
+        
+        .story-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .story-title {
+            font-size: 18px;
+            margin: 0 0 10px 0;
+        }
+        
+        .story-title a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .story-title a:hover {
+            text-decoration: underline;
+        }
+        
+        .story-meta {
+            display: flex;
+            font-size: 14px;
+            color: #5f6368;
+        }
+        
+        .story-meta span {
+            margin-right: 15px;
+        }
+        
+        .story-meta .score {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+        
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .chart {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            width: calc(50% - 15px);
+        }
+        
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        
+        .tag {
+            background-color: #e8f0fe;
+            color: var(--primary-color);
+            border-radius: 16px;
+            padding: 5px 12px;
+            margin: 0 8px 8px 0;
+            font-size: 14px;
+        }
+        
+        .domain-list {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .domain-item {
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 10px;
+            margin: 0 10px 10px 0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .domain-item .count {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 8px;
+            font-size: 12px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 50px;
+            border-top: 1px solid var(--light-gray);
+            color: #5f6368;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .stat-card {
+                width: calc(50% - 15px);
+            }
+            
+            .chart {
+                width: 100%;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stat-card {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <div class="logo">AI 스타트업 동향 리포트</div>
+            <div class="report-date">{{report_date}}</div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="summary-box">
+            <h2>오늘의 AI 스타트업 동향 요약</h2>
+            <p>{{summary_text}}</p>
+            
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <h4>수집된 스토리</h4>
+                    <div class="value">{{total_stories}}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>평균 점수</h4>
+                    <div class="value">{{avg_score}}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>최고 점수</h4>
+                    <div class="value">{{max_score}}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>인기 도메인</h4>
+                    <div class="value">{{top_domain}}</div>
+                </div>
+            </div>
+        </div>
+        
+        <h2>주요 키워드</h2>
+        <div class="tag-cloud">
+            {% for keyword in top_keywords %}
+            <span class="tag">{{ keyword.keyword }} ({{ keyword.count }})</span>
+            {% endfor %}
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart">
+                <h3>시간대별 분포</h3>
+                <div id="hourChart"></div>
+            </div>
+            <div class="chart">
+                <h3>요일별 분포</h3>
+                <div id="dayChart"></div>
+            </div>
+        </div>
+        
+        <h2>인기 도메인</h2>
+        <div class="domain-list">
+            {% for domain in top_domains %}
+            <div class="domain-item">
+                {{ domain.domain }} <span class="count">{{ domain.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <h1>오늘의 주요 AI 스타트업 스토리</h1>
+        <ul class="story-list">
+            {% for story in top_stories %}
+            <li class="story-item">
+                <h3 class="story-title"><a href="{{ story.url }}" target="_blank">{{ story.title }}</a></h3>
+                {% if story.text %}
+                <p>{{ story.text }}</p>
+                {% endif %}
+                <div class="story-meta">
+                    <span class="score">{{ story.score }} 포인트</span>
+                    <span class="author">작성자: {{ story.by }}</span>
+                    <span class="comments">댓글: {{ story.descendants }}</span>
+                    <span class="time">{{ story.time_ago }}</span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        
+        <h2>새로운 AI 스타트업 소식</h2>
+        <ul class="story-list">
+            {% for story in new_stories %}
+            <li class="story-item">
+                <h3 class="story-title"><a href="{{ story.url }}" target="_blank">{{ story.title }}</a></h3>
+                {% if story.text %}
+                <p>{{ story.text }}</p>
+                {% endif %}
+                <div class="story-meta">
+                    <span class="score">{{ story.score }} 포인트</span>
+                    <span class="author">작성자: {{ story.by }}</span>
+                    <span class="comments">댓글: {{ story.descendants }}</span>
+                    <span class="time">{{ story.time_ago }}</span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        
+        <h2>주목할 만한 토론</h2>
+        <ul class="story-list">
+            {% for story in discussions %}
+            <li class="story-item">
+                <h3 class="story-title"><a href="{{ story.url }}" target="_blank">{{ story.title }}</a></h3>
+                {% if story.text %}
+                <p>{{ story.text }}</p>
+                {% endif %}
+                <div class="story-meta">
+                    <span class="score">{{ story.score }} 포인트</span>
+                    <span class="author">작성자: {{ story.by }}</span>
+                    <span class="comments">댓글: {{ story.descendants }}</span>
+                    <span class="time">{{ story.time_ago }}</span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>이 리포트는 Y Combinator Hacker News에서 수집된 데이터를 기반으로 자동 생성되었습니다.</p>
+            <p>© {{current_year}} AI 스타트업 동향 트래커</p>
+        </div>
+    </footer>
+    
+    <!-- 차트 라이브러리 (실제 구현 시 추가) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 차트 데이터 및 렌더링 코드는 실제 데이터로 대체됩니다.
+        const hourData = {{hour_data}};
+        const dayData = {{day_data}};
+        
+        // 시간대별 차트
+        const hourCtx = document.getElementById('hourChart').getContext('2d');
+        new Chart(hourCtx, {
+            type: 'line',
+            data: {
+                labels: hourData.labels,
+                datasets: [{
+                    label: '스토리 수',
+                    data: hourData.values,
+                    backgroundColor: 'rgba(66, 133, 244, 0.2)',
+                    borderColor: 'rgba(66, 133, 244, 1)',
+                    borderWidth: 2,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // 요일별 차트
+        const dayCtx = document.getElementById('dayChart').getContext('2d');
+        new Chart(dayCtx, {
+            type: 'bar',
+            data: {
+                labels: dayData.labels,
+                datasets: [{
+                    label: '스토리 수',
+                    data: dayData.values,
+                    backgroundColor: 'rgba(52, 168, 83, 0.2)',
+                    borderColor: 'rgba(52, 168, 83, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
