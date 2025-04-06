@@ -33,12 +33,31 @@
             padding: 10px;
             border-radius: 5px;
             text-align: center;
+            max-width: 80%;
+        }
+        .controls {
+            position: absolute;
+            bottom: 70px;
+            right: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: right;
         }
     </style>
 </head>
 <body>
     <div class="info">3D Bouncing Ball with Mouse Control</div>
-    <div class="instructions">Move your mouse quickly through the ball to hit it!</div>
+    <div class="instructions">
+        <strong>Move your mouse quickly through the ball to hit it!</strong><br>
+        The yellow cursor indicates you're close to the ball. The ball will turn orange when hit.
+    </div>
+    <div class="controls">
+        Press <strong>D</strong> to toggle debug info<br>
+        Press <strong>R</strong> to reset ball
+    </div>
     
     <!-- Import Three.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>

@@ -5,6 +5,7 @@ let ballVelocity = { x: 0, y: 0, z: 0 };
 const gravity = 0.01;
 const damping = 0.8; // Energy loss on bounce
 const initialPosition = { x: 0, y: 5, z: 0 };
+let debugMode = true; // Set to true to show debug information
 
 // Mouse tracking variables
 let mouse = new THREE.Vector2();
@@ -13,8 +14,9 @@ let mouseVelocity = new THREE.Vector2();
 let raycaster = new THREE.Raycaster();
 let isMouseMoving = false;
 let lastMouseMoveTime = 0;
-const mouseVelocityUpdateInterval = 20; // ms between updates
+const mouseVelocityUpdateInterval = 10; // Reduced from 20ms to 10ms for more responsive updates
 let mousePointer;
+let mouseTrail = []; // Store recent mouse positions for trail effect
 
 // Initialize the scene
 function init() {
@@ -60,6 +62,17 @@ function init() {
     ball.castShadow = true;
     scene.add(ball);
 
+    // Add a wireframe to the ball for better visual depth
+    const ballWireframe = new THREE.LineSegments(
+        new THREE.WireframeGeometry(ballGeometry),
+        new THREE.LineBasicMaterial({ 
+            color: 0x4fa8e2, 
+            transparent: true, 
+            opacity: 0.3 
+        })
+    );
+    ball.add(ballWireframe);
+
     // Create floor
     const floorGeometry = new THREE.BoxGeometry(15, 0.5, 15);
     const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x2ecc71 });
@@ -81,11 +94,19 @@ function init() {
     // Initialize mouse position
     prevMouse.x = mouse.x;
     prevMouse.y = mouse.y;
+
+    // Add debug info display
+    if (debugMode) {
+        createDebugInfo();
+    }
+    
+    // Add keyboard event listener for toggling debug mode
+    window.addEventListener('keydown', onKeyDown);
 }
 
 // Create a visual representation of the mouse pointer in 3D space
 function createMousePointer() {
-    const pointerGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+    const pointerGeometry = new THREE.SphereGeometry(0.3, 16, 16);
     const pointerMaterial = new THREE.MeshPhongMaterial({ 
         color: 0xff5555, 
         transparent: true,
@@ -95,18 +116,129 @@ function createMousePointer() {
     });
     mousePointer = new THREE.Mesh(pointerGeometry, pointerMaterial);
     mousePointer.position.set(0, 0, 5);
+    
+    // Add trails to show movement
+    const trailGeometry = new THREE.RingGeometry(0.1, 0.4, 16);
+    const trailMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff3333, 
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    const trail = new THREE.Mesh(trailGeometry, trailMaterial);
+    trail.rotation.x = Math.PI / 2;
+    mousePointer.add(trail);
+    
     scene.add(mousePointer);
+}
+
+// Handle keyboard input
+function onKeyDown(event) {
+    // Toggle debug mode with 'D' key
+    if (event.key === 'd' || event.key === 'D') {
+        debugMode = !debugMode;
+        const debugElement = document.getElementById('debug-info');
+        if (debugElement) {
+            debugElement.style.display = debugMode ? 'block' : 'none';
+        }
+    }
+    
+    // Reset ball with 'R' key
+    if (event.key === 'r' || event.key === 'R') {
+        resetBall();
+    }
+}
+
+// Create debug information display
+function createDebugInfo() {
+    const debugElement = document.createElement('div');
+    debugElement.id = 'debug-info';
+    debugElement.style.position = 'absolute';
+    debugElement.style.top = '50px';
+    debugElement.style.left = '10px';
+    debugElement.style.color = 'white';
+    debugElement.style.fontFamily = 'monospace';
+    debugElement.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    debugElement.style.padding = '10px';
+    debugElement.style.borderRadius = '5px';
+    debugElement.style.width = '250px';
+    debugElement.innerHTML = 'Debug Info Loading...';
+    document.body.appendChild(debugElement);
+}
+
+// Update debug information
+function updateDebugInfo() {
+    if (!debugMode) return;
+    
+    const debugElement = document.getElementById('debug-info');
+    if (!debugElement) return;
+    
+    const distance = ball.position.distanceTo(mousePointer.position);
+    const speed = Math.sqrt(mouseVelocity.x * mouseVelocity.x + mouseVelocity.y * mouseVelocity.y);
+    
+    debugElement.innerHTML = `
+        <b>Ball Position:</b> X: ${ball.position.x.toFixed(2)}, Y: ${ball.position.y.toFixed(2)}, Z: ${ball.position.z.toFixed(2)}<br>
+        <b>Ball Velocity:</b> X: ${ballVelocity.x.toFixed(2)}, Y: ${ballVelocity.y.toFixed(2)}, Z: ${ballVelocity.z.toFixed(2)}<br>
+        <b>Mouse Velocity:</b> ${speed.toFixed(2)}<br>
+        <b>Distance to Ball:</b> ${distance.toFixed(2)}<br>
+        <b>Is Mouse Moving:</b> ${isMouseMoving}<br>
+        <hr>
+        <i>Press 'D' to toggle debug mode</i><br>
+        <i>Press 'R' to reset ball</i>
+    `;
 }
 
 // Update the mouse pointer position based on raycasting
 function updateMousePointer() {
     raycaster.setFromCamera(mouse, camera);
     
-    // Find the point 5 units away from the camera in the mouse direction
+    // Find intersection with the scene
     const pointerDistance = 5;
     const pointerPosition = new THREE.Vector3();
     raycaster.ray.at(pointerDistance, pointerPosition);
+    
+    // Check if mouse position has changed significantly
+    if (mousePointer.position.distanceTo(pointerPosition) > 0.01) {
+        // Store previous position for trail
+        if (isMouseMoving) {
+            mouseTrail.push(mousePointer.position.clone());
+            if (mouseTrail.length > 5) {
+                mouseTrail.shift();
+            }
+        }
+    }
+    
+    // Update mouse pointer position
     mousePointer.position.copy(pointerPosition);
+    
+    // Update mouse trail
+    if (mouseTrail.length > 0 && mousePointer.children.length > 1) {
+        // Remove old trail meshes
+        for (let i = mousePointer.children.length - 1; i > 0; i--) {
+            if (mousePointer.children[i].userData.isTrail) {
+                mousePointer.remove(mousePointer.children[i]);
+            }
+        }
+        
+        // Add new trail meshes
+        mouseTrail.forEach((position, index) => {
+            const opacity = 0.2 * (index + 1) / mouseTrail.length;
+            const trailMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xff3333, 
+                transparent: true,
+                opacity: opacity,
+                side: THREE.DoubleSide
+            });
+            
+            const trailMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1, 8, 8),
+                trailMaterial
+            );
+            trailMesh.position.copy(position);
+            trailMesh.userData.isTrail = true;
+            mousePointer.add(trailMesh);
+        });
+    }
 }
 
 // Create walls around the scene
@@ -178,42 +310,59 @@ function onMouseMove(event) {
         // Reset flag after short delay to detect when mouse stops
         setTimeout(() => {
             isMouseMoving = false;
-        }, 100);
+        }, 300); // Increased from 100ms to 300ms
     }
 }
 
 // Check collision between the mouse pointer and the ball
 function checkMouseCollision() {
-    if (!isMouseMoving) return;
-    
     const ballRadius = 1;
-    const mouseRadius = 0.2;
+    const mouseRadius = 0.3; // Increased from 0.2 to 0.3
     const distance = ball.position.distanceTo(mousePointer.position);
+    
+    // Debug collision detection
+    if (distance < ballRadius + mouseRadius + 0.5) {
+        mousePointer.material.color.set(0xffff00);
+    } else {
+        mousePointer.material.color.set(0xff5555);
+    }
     
     // Check for collision
     if (distance < ballRadius + mouseRadius) {
-        // Calculate mouse velocity magnitude
+        // Calculate mouse velocity magnitude (consider adding a minimum velocity)
         const speed = Math.sqrt(mouseVelocity.x * mouseVelocity.x + mouseVelocity.y * mouseVelocity.y);
         
-        // Only apply force if mouse is moving with enough speed
-        if (speed > 0.3) {
+        // Lower the threshold for applying force
+        if (speed > 0.1) { // Reduced from 0.3 to 0.1
             // Direction from mouse to ball
             const direction = new THREE.Vector3()
                 .subVectors(ball.position, mousePointer.position)
                 .normalize();
             
-            // Apply force based on mouse speed
-            const force = 0.1 * speed;
+            // Apply force based on mouse speed - increased force multiplier
+            const force = 0.3 * speed; // Increased from 0.1 to 0.3
             ballVelocity.x += direction.x * force;
             ballVelocity.y += direction.y * force;
             ballVelocity.z += direction.z * force;
             
-            // Visual feedback - change ball color briefly
+            // Add some randomness to make it more interesting
+            ballVelocity.x += (Math.random() - 0.5) * 0.05;
+            ballVelocity.z += (Math.random() - 0.5) * 0.05;
+            
+            // More obvious visual feedback - change ball color briefly
             const originalColor = ball.material.color.getHex();
-            ball.material.color.set(0xff9500);
+            ball.material.color.set(0xff3300);
+            ball.material.emissive = new THREE.Color(0xff0000);
+            ball.material.emissiveIntensity = 0.5;
+            
             setTimeout(() => {
                 ball.material.color.set(originalColor);
-            }, 100);
+                ball.material.emissive = new THREE.Color(0x000000);
+                ball.material.emissiveIntensity = 0;
+            }, 200);
+            
+            // Log collision for debugging
+            console.log("Ball hit! Speed:", speed, "Force:", force);
         }
     }
 }
@@ -300,6 +449,9 @@ function animate() {
     
     // Update ball physics
     updateBall();
+    
+    // Update debug info
+    updateDebugInfo();
     
     // Render scene
     renderer.render(scene, camera);
