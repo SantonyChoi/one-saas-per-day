@@ -129,26 +129,37 @@ def is_ai_startup_related(item):
     # 스타트업 키워드가 있으면 더 관련성이 높음
     return has_ai_keyword or has_startup_keyword
 
-def fetch_ai_startup_stories(story_types=['top', 'new', 'show'], limit_per_type=100):
+def fetch_ai_startup_stories(story_types=['top', 'new', 'show'], limit_per_type=100, max_stories=50):
     """
     여러 유형의 스토리에서 AI 스타트업 관련 스토리를 수집합니다.
     
     Args:
         story_types (list): 수집할 스토리 유형 목록
         limit_per_type (int): 각 유형별로 가져올 스토리 수
+        max_stories (int): 처리할 최대 스토리 수 (모든 유형 합계)
         
     Returns:
         list: AI 스타트업 관련 스토리 목록
     """
     ai_startup_stories = []
+    total_stories_processed = 0
     
     for story_type in story_types:
         print(f"Fetching {story_type} stories...")
         story_ids = get_stories(story_type, limit_per_type)
         
-        for story_id in story_ids:
-            # API 요청 간 짧은 지연 추가
-            time.sleep(0.1)
+        for i, story_id in enumerate(story_ids):
+            # 최대 스토리 수 확인
+            if total_stories_processed >= max_stories:
+                print(f"Reached maximum number of stories to process ({max_stories})")
+                return ai_startup_stories
+                
+            # 진행 상황 표시 (10개마다)
+            if i % 10 == 0:
+                print(f"Processing {story_type} story {i+1}/{len(story_ids)}...")
+                
+            # API 요청 간 지연 추가 (0.5초로 증가)
+            time.sleep(0.5)
             
             item = get_item_details(story_id)
             if item and is_ai_startup_related(item):
@@ -157,6 +168,8 @@ def fetch_ai_startup_stories(story_types=['top', 'new', 'show'], limit_per_type=
                 ai_startup_stories.append(item)
                 
                 print(f"Found AI startup related story: {item.get('title')}")
+            
+            total_stories_processed += 1
     
     return ai_startup_stories
 

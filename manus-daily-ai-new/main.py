@@ -68,7 +68,7 @@ def check_dependencies():
     
     return True
 
-def run_script(script_name, timeout=300):
+def run_script(script_name, timeout=600):
     """
     지정된 스크립트를 실행합니다.
     
@@ -87,6 +87,8 @@ def run_script(script_name, timeout=300):
     
     try:
         logger.info(f"Running script: {script_path}")
+        logger.info(f"This may take several minutes for API requests to complete. Timeout set to {timeout} seconds.")
+        
         result = subprocess.run(
             [sys.executable, str(script_path)],
             capture_output=True,
@@ -94,7 +96,14 @@ def run_script(script_name, timeout=300):
             check=True,
             timeout=timeout
         )
-        logger.info(f"Script output: {result.stdout}")
+        
+        # 출력 로깅 (너무 길면 잘라냄)
+        output = result.stdout
+        if len(output) > 1000:
+            logger.info(f"Script output (truncated): {output[:997]}...")
+        else:
+            logger.info(f"Script output: {output}")
+            
         return True
     except subprocess.TimeoutExpired:
         logger.error(f"Script timed out after {timeout} seconds")
